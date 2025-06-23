@@ -63,7 +63,7 @@ const DesignOrderForm = () => {
     window.open(whatsappUrl, '_blank');
   };
   return <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 py-8 px-4">
-      <div className="container mx-auto max-w-6xl">
+      <div className="container mx-auto max-w-6xl bg-gray-100">
         {/* Header Section */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-8">
@@ -163,7 +163,7 @@ const DesignOrderForm = () => {
                 <FileText className="w-8 h-8 text-red-500" />
                 اطلب تصميمك الآن
               </CardTitle>
-              <p className="font-cairo text-gray-600 mt-2">املأ البيانات وسنتواصل معك فوراً</p>
+              <p className="font-cairo text-gray-600 mt-2">أرسل بياناتك وسنتواصل معك فوراً</p>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -176,11 +176,8 @@ const DesignOrderForm = () => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="font-cairo text-gray-800 flex items-center gap-2 font-semibold">
-                    <Phone className="w-5 h-5 text-red-500" />
-                    رقم الهاتف *
-                  </Label>
-                  <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="05xxxxxxxx" className="font-cairo h-14 text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl" required />
+                  
+                  
                 </div>
 
                 <div className="space-y-2">
@@ -228,7 +225,7 @@ const DesignOrderForm = () => {
             </p>
             <div className="flex items-center justify-center gap-4 text-sm text-gray-600">
               <span className="font-cairo">📧 info@orcal.com</span>
-              <span className="font-cairo">📱 +966 50 123 4567</span>
+              <span className="font-cairo">📱 0112596876</span>
               <span className="font-cairo">🌐 www.orcal.com</span>
             </div>
           </div>
