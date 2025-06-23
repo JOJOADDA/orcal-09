@@ -1,18 +1,23 @@
 
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, LogIn } from 'lucide-react';
+import { Menu, X, Phone, Mail } from 'lucide-react';
 
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems = [
     { label: 'الرئيسية', href: '#home' },
-    { label: 'الباقات', href: '#pricing' },
+    { label: 'خدماتنا', href: '#services' },
+    { label: 'الأسعار', href: '#pricing' },
     { label: 'معرض الأعمال', href: '#portfolio' },
-    { label: 'من نحن', href: '#about' },
     { label: 'تواصل معنا', href: '#contact' },
   ];
+
+  const scrollToOrder = () => {
+    const orderSection = document.getElementById('pricing');
+    orderSection?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   return (
     <header className="fixed top-0 w-full bg-white/95 backdrop-blur-md border-b border-gray-200 z-50">
@@ -40,15 +45,19 @@ const Header = () => {
             ))}
           </nav>
 
-          {/* Desktop Auth Buttons */}
+          {/* Desktop CTA */}
           <div className="hidden md:flex items-center space-x-4 rtl:space-x-reverse">
-            <Button variant="ghost" className="font-cairo">
-              <LogIn className="w-4 h-4 ml-2" />
-              تسجيل الدخول
-            </Button>
-            <Button className="font-cairo bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700">
-              <User className="w-4 h-4 ml-2" />
-              إنشاء حساب
+            <div className="flex items-center space-x-4 rtl:space-x-reverse text-gray-600 text-sm">
+              <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                <Phone className="w-4 h-4" />
+                <span className="font-cairo">+966 50 123 4567</span>
+              </div>
+            </div>
+            <Button 
+              onClick={scrollToOrder}
+              className="font-cairo bg-gradient-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 px-6"
+            >
+              اطلب تصميمك الآن
             </Button>
           </div>
 
@@ -75,14 +84,15 @@ const Header = () => {
                   {item.label}
                 </a>
               ))}
-              <div className="flex flex-col space-y-2 pt-4 border-t border-gray-200">
-                <Button variant="ghost" className="font-cairo justify-start">
-                  <LogIn className="w-4 h-4 ml-2" />
-                  تسجيل الدخول
-                </Button>
-                <Button className="font-cairo bg-gradient-to-r from-purple-500 to-blue-600 justify-start">
-                  <User className="w-4 h-4 ml-2" />
-                  إنشاء حساب
+              <div className="pt-4 border-t border-gray-200">
+                <Button 
+                  onClick={() => {
+                    scrollToOrder();
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full font-cairo bg-gradient-to-r from-purple-500 to-blue-600"
+                >
+                  اطلب تصميمك الآن
                 </Button>
               </div>
             </nav>
