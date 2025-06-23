@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,7 +5,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Send, Palette, Phone, User, FileText, Clock, Star, CheckCircle, Award, Users, Heart, Zap } from 'lucide-react';
-
 const DesignOrderForm = () => {
   const [formData, setFormData] = useState({
     name: '',
@@ -14,43 +12,40 @@ const DesignOrderForm = () => {
     designType: '',
     description: ''
   });
-
-  const designTypes = [
-    'تصميم شعار (Logo)',
-    'هوية بصرية كاملة',
-    'منشورات سوشيال ميديا',
-    'تصميم بروشور أو فلاير',
-    'تصميم بانر إعلاني',
-    'تصميم كارت شخصي',
-    'تصميم غلاف فيسبوك',
-    'تصميم عرض تقديمي',
-    'تصميم تغليف منتج',
-    'أخرى'
-  ];
-
-  const features = [
-    { icon: Clock, title: 'تسليم سريع', desc: 'خلال 24-48 ساعة' },
-    { icon: Award, title: 'جودة عالية', desc: 'تصاميم احترافية' },
-    { icon: Users, title: '+500 عميل', desc: 'راضي عن خدماتنا' },
-    { icon: Heart, title: 'دعم مستمر', desc: 'متابعة ما بعد التسليم' }
-  ];
-
+  const designTypes = ['تصميم شعار (Logo)', 'هوية بصرية كاملة', 'منشورات سوشيال ميديا', 'تصميم بروشور أو فلاير', 'تصميم بانر إعلاني', 'تصميم كارت شخصي', 'تصميم غلاف فيسبوك', 'تصميم عرض تقديمي', 'تصميم تغليف منتج', 'أخرى'];
+  const features = [{
+    icon: Clock,
+    title: 'تسليم سريع',
+    desc: 'خلال 24-48 ساعة'
+  }, {
+    icon: Award,
+    title: 'جودة عالية',
+    desc: 'تصاميم احترافية'
+  }, {
+    icon: Users,
+    title: '+500 عميل',
+    desc: 'راضي عن خدماتنا'
+  }, {
+    icon: Heart,
+    title: 'دعم مستمر',
+    desc: 'متابعة ما بعد التسليم'
+  }];
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const {
+      name,
+      value
+    } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value
     }));
   };
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!formData.name || !formData.phone || !formData.designType || !formData.description) {
       alert('يرجى ملء جميع الحقول المطلوبة');
       return;
     }
-
     const message = `
 🎨 *طلب تصميم جديد من أوركال*
 
@@ -62,27 +57,19 @@ const DesignOrderForm = () => {
 *شركة أوركال للدعاية والإعلان*
 نحن في انتظار خدمتكم! 🌟
     `.trim();
-
     const phoneNumber = '966501234567';
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
-    
     window.open(whatsappUrl, '_blank');
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 py-8 px-4">
+  return <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 py-8 px-4">
       <div className="container mx-auto max-w-6xl">
         {/* Header Section */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-8">
-            <img 
-              src="/lovable-uploads/6335bf9e-3114-421a-a6ee-6490ab0c3d43.png" 
-              alt="أوركال للدعاية والإعلان" 
-              className="w-32 h-32 object-contain"
-            />
+            <img src="/lovable-uploads/6335bf9e-3114-421a-a6ee-6490ab0c3d43.png" alt="أوركال للدعاية والإعلان" className="w-32 h-32 object-contain" />
           </div>
-          <h1 className="font-cairo font-bold text-5xl text-gray-900 mb-4 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="font-cairo font-bold text-5xl text-gray-900 mb-4 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 bg-clip-text text-transparent px-[79px] py-[15px]">
             أوركال للدعاية والإعلان
           </h1>
           <p className="font-cairo text-xl text-gray-700 mb-2">
@@ -94,13 +81,13 @@ const DesignOrderForm = () => {
           
           {/* Features Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {features.map((feature, index) => (
-              <div key={index} className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-lg transform hover:scale-105 transition-all duration-300">
-                <feature.icon className="w-8 h-8 mx-auto mb-2 text-gradient-to-r from-red-500 to-purple-600" style={{color: '#e11d48'}} />
+            {features.map((feature, index) => <div key={index} className="bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-lg transform hover:scale-105 transition-all duration-300">
+                <feature.icon className="w-8 h-8 mx-auto mb-2 text-gradient-to-r from-red-500 to-purple-600" style={{
+              color: '#e11d48'
+            }} />
                 <h3 className="font-cairo font-bold text-gray-900 text-sm mb-1">{feature.title}</h3>
                 <p className="font-cairo text-xs text-gray-600">{feature.desc}</p>
-              </div>
-            ))}
+              </div>)}
           </div>
 
           {/* Stats */}
@@ -185,16 +172,7 @@ const DesignOrderForm = () => {
                     <User className="w-5 h-5 text-red-500" />
                     الاسم الكامل *
                   </Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    type="text"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder="أدخل اسمك الكامل"
-                    className="font-cairo h-14 text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl"
-                    required
-                  />
+                  <Input id="name" name="name" type="text" value={formData.name} onChange={handleInputChange} placeholder="أدخل اسمك الكامل" className="font-cairo h-14 text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl" required />
                 </div>
                 
                 <div className="space-y-2">
@@ -202,16 +180,7 @@ const DesignOrderForm = () => {
                     <Phone className="w-5 h-5 text-red-500" />
                     رقم الهاتف *
                   </Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleInputChange}
-                    placeholder="05xxxxxxxx"
-                    className="font-cairo h-14 text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl"
-                    required
-                  />
+                  <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="05xxxxxxxx" className="font-cairo h-14 text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl" required />
                 </div>
 
                 <div className="space-y-2">
@@ -219,18 +188,9 @@ const DesignOrderForm = () => {
                     <Palette className="w-5 h-5 text-red-500" />
                     نوع التصميم المطلوب *
                   </Label>
-                  <select
-                    id="designType"
-                    name="designType"
-                    value={formData.designType}
-                    onChange={handleInputChange}
-                    className="w-full h-14 px-4 rounded-xl border-2 border-gray-200 font-cairo bg-white focus:outline-none focus:border-red-400 text-lg"
-                    required
-                  >
+                  <select id="designType" name="designType" value={formData.designType} onChange={handleInputChange} className="w-full h-14 px-4 rounded-xl border-2 border-gray-200 font-cairo bg-white focus:outline-none focus:border-red-400 text-lg" required>
                     <option value="">اختر نوع التصميم</option>
-                    {designTypes.map((type) => (
-                      <option key={type} value={type}>{type}</option>
-                    ))}
+                    {designTypes.map(type => <option key={type} value={type}>{type}</option>)}
                   </select>
                 </div>
 
@@ -238,22 +198,10 @@ const DesignOrderForm = () => {
                   <Label htmlFor="description" className="font-cairo text-gray-800 font-semibold">
                     تفاصيل التصميم المطلوب *
                   </Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    placeholder="اكتب هنا تفاصيل التصميم بدقة: الألوان المفضلة، النص المطلوب، الأسلوب، أي ملاحظات خاصة..."
-                    className="font-cairo min-h-[140px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-xl text-lg"
-                    required
-                  />
+                  <Textarea id="description" name="description" value={formData.description} onChange={handleInputChange} placeholder="اكتب هنا تفاصيل التصميم بدقة: الألوان المفضلة، النص المطلوب، الأسلوب، أي ملاحظات خاصة..." className="font-cairo min-h-[140px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-xl text-lg" required />
                 </div>
 
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full font-cairo text-xl py-8 bg-gradient-to-r from-red-500 via-purple-500 to-blue-600 hover:from-red-600 hover:via-purple-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-2xl rounded-xl"
-                >
+                <Button type="submit" size="lg" className="w-full font-cairo text-xl py-8 bg-gradient-to-r from-red-500 via-purple-500 to-blue-600 hover:from-red-600 hover:via-purple-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-2xl rounded-xl">
                   <Send className="w-6 h-6 ml-3" />
                   إرسال الطلب عبر واتساب
                 </Button>
@@ -286,8 +234,6 @@ const DesignOrderForm = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default DesignOrderForm;
