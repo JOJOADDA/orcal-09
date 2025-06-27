@@ -62,7 +62,7 @@ const DesignOrderForm = () => {
 نحن في انتظار خدمتكم! 🌟
     `.trim();
 
-    const phoneNumber = '966501234567';
+    const phoneNumber = '+249112596876';
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
     
