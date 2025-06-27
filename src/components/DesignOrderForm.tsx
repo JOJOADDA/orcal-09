@@ -67,7 +67,7 @@ const DesignOrderForm = () => {
         {/* Header Section */}
         <div className="text-center mb-12">
           <div className="flex items-center justify-center mb-8">
-            <img src="/lovable-uploads/6335bf9e-3114-421a-a6ee-6490ab0c3d43.png" alt="أوركال للدعاية والإعلان" className="w-32 h-32 object-contain" />
+            <img alt="أوركال للدعاية والإعلان" className="w-32 h-32 object-contain" src="/lovable-uploads/65aa4b7b-e60a-4160-bf45-4c057f62c70a.png" />
           </div>
           <h1 className="font-cairo font-bold text-5xl text-gray-900 mb-4 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 bg-clip-text text-transparent px-[79px] py-[15px]">
             أوركال للدعاية والإعلان
