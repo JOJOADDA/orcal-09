@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -70,7 +71,7 @@ const DesignOrderForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 py-4 px-4 sm:py-8">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 py-4 px-4 sm:py-8 font-arabic">
       <div className="container mx-auto max-w-7xl">
         {/* Header Section */}
         <div className="text-center mb-8 sm:mb-12">
@@ -207,7 +208,7 @@ const DesignOrderForm = () => {
                     type="tel"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="05xxxxxxxx"
+                    placeholder="09xxxxxxxx"
                     className="font-body h-12 sm:h-14 text-base sm:text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl"
                     required
                   />
