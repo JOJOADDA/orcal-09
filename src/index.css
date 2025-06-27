@@ -1,4 +1,3 @@
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -92,7 +91,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-cairo;
+    @apply bg-background text-foreground font-arabic;
     direction: rtl;
   }
 
@@ -109,6 +108,14 @@
   
   .ltr {
     direction: ltr;
+  }
+  
+  .font-display {
+    @apply font-almarai font-bold;
+  }
+  
+  .font-body {
+    @apply font-tajawal;
   }
 }
 
