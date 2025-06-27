@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -192,7 +191,7 @@ const DesignOrderForm = () => {
                 <div className="space-y-2">
                   <Label htmlFor="name" className="font-display text-gray-800 flex items-center gap-2 font-semibold text-sm sm:text-base">
                     <User className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
-                    الاسم الكامل *
+                    اسم العميل *
                   </Label>
                   <Input
                     id="name"
