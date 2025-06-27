@@ -71,42 +71,49 @@ const DesignOrderForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 py-4 px-4 sm:py-8 font-arabic">
-      <div className="container mx-auto max-w-7xl">
-        {/* Header Section */}
-        <div className="text-center mb-8 sm:mb-12">
-          <div className="flex items-center justify-center mb-6 sm:mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 font-arabic">
+      {/* Mobile-first responsive container with proper centering */}
+      <div className="w-full max-w-screen-2xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-4 sm:py-6 md:py-8">
+        {/* Header Section - Optimized for mobile centering */}
+        <div className="text-center mb-6 sm:mb-8 md:mb-12">
+          {/* Logo Section - Responsive sizing */}
+          <div className="flex items-center justify-center mb-4 sm:mb-6 md:mb-8">
             <img 
               src="/lovable-uploads/65aa4b7b-e60a-4160-bf45-4c057f62c70a.png" 
               alt="أوركال للدعاية والإعلان" 
-              className="w-24 h-24 sm:w-32 sm:h-32 object-contain"
+              className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 lg:w-32 lg:h-32 object-contain"
             />
           </div>
-          <h1 className="font-display font-bold text-3xl sm:text-4xl lg:text-5xl text-gray-900 mb-3 sm:mb-4 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 bg-clip-text text-transparent px-4">
+          
+          {/* Title - Responsive text sizing */}
+          <h1 className="font-display font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl text-gray-900 mb-2 sm:mb-3 md:mb-4 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 bg-clip-text text-transparent px-2 leading-tight">
             أوركال للدعاية والإعلان
           </h1>
-          <p className="font-body text-lg sm:text-xl text-gray-700 mb-2 px-4 font-medium">
+          
+          {/* Subtitle - Responsive text */}
+          <p className="font-body text-base sm:text-lg md:text-xl text-gray-700 mb-2 px-2 sm:px-4 font-medium leading-relaxed">
             نحول أفكارك إلى تصاميم إبداعية مذهلة
           </p>
-          <p className="font-body text-base sm:text-lg text-gray-600 mb-6 sm:mb-8 px-4">
+          
+          <p className="font-body text-sm sm:text-base md:text-lg text-gray-600 mb-4 sm:mb-6 md:mb-8 px-2 sm:px-4 leading-relaxed">
             خبرة تزيد عن 20 سنة في عالم الدعاية والإعلان والإنتاج الفني
           </p>
           
-          {/* Features Grid */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6 sm:mb-8 px-2">
+          {/* Features Grid - Mobile-first responsive */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6 md:mb-8 max-w-4xl mx-auto">
             {features.map((feature, index) => (
-              <div key={index} className="bg-white/80 backdrop-blur-sm rounded-xl p-3 sm:p-4 shadow-lg transform hover:scale-105 transition-all duration-300">
-                <feature.icon className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-red-500" />
-                <h3 className="font-display font-bold text-gray-900 text-xs sm:text-sm mb-1">{feature.title}</h3>
-                <p className="font-body text-xs text-gray-600">{feature.desc}</p>
+              <div key={index} className="bg-white/80 backdrop-blur-sm rounded-lg sm:rounded-xl p-2 sm:p-3 md:p-4 shadow-lg transform hover:scale-105 transition-all duration-300">
+                <feature.icon className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 mx-auto mb-1 sm:mb-2 text-red-500" />
+                <h3 className="font-display font-bold text-gray-900 text-xs sm:text-sm md:text-base mb-0.5 sm:mb-1">{feature.title}</h3>
+                <p className="font-body text-xs sm:text-xs md:text-sm text-gray-600 leading-tight">{feature.desc}</p>
               </div>
             ))}
           </div>
 
-          {/* Stats */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-gray-600 bg-white/60 rounded-2xl p-4 sm:p-6 backdrop-blur-sm mx-2">
-            <div className="flex items-center gap-2">
-              <Star className="w-4 h-4 sm:w-5 sm:h-5 fill-yellow-400 text-yellow-400" />
+          {/* Stats - Mobile-optimized layout */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 md:gap-8 text-xs sm:text-sm text-gray-600 bg-white/60 rounded-xl sm:rounded-2xl p-3 sm:p-4 md:p-6 backdrop-blur-sm mx-auto max-w-2xl">
+            <div className="flex items-center gap-1 sm:gap-2">
+              <Star className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 fill-yellow-400 text-yellow-400" />
               <span className="font-display font-bold">4.9/5</span>
               <span className="font-body">تقييم العملاء</span>
             </div>
@@ -117,45 +124,47 @@ const DesignOrderForm = () => {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-6 lg:gap-12 items-start">
-          {/* Left Side - Company Info */}
-          <div className="space-y-6 sm:space-y-8 order-2 lg:order-1">
+        {/* Main Content - Mobile-first responsive grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 xl:gap-12 items-start max-w-7xl mx-auto">
+          
+          {/* Company Info - Mobile-first order */}
+          <div className="space-y-4 sm:space-y-6 md:space-y-8 order-2 lg:order-1">
             <Card className="bg-gradient-to-br from-white/90 to-white/70 backdrop-blur-md border-0 shadow-2xl">
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="font-display text-xl sm:text-2xl text-gray-900 flex items-center gap-3">
-                  <Palette className="w-6 h-6 sm:w-7 sm:h-7 text-red-500" />
+              <CardHeader className="p-3 sm:p-4 md:p-6">
+                <CardTitle className="font-display text-lg sm:text-xl md:text-2xl text-gray-900 flex items-center gap-2 sm:gap-3">
+                  <Palette className="w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 text-red-500" />
                   لماذا أوركال؟
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
-                <div className="space-y-3 sm:space-y-4">
-                  <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-xl">
-                    <CheckCircle className="w-5 h-5 sm:w-6 sm:h-6 text-red-500 flex-shrink-0 mt-0.5" />
+              <CardContent className="space-y-3 sm:space-y-4 md:space-y-6 p-3 sm:p-4 md:p-6 pt-0">
+                <div className="space-y-2 sm:space-y-3 md:space-y-4">
+                  <div className="flex items-start gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 bg-gradient-to-r from-red-50 to-orange-50 rounded-lg sm:rounded-xl">
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-red-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <h4 className="font-display font-bold text-gray-900 mb-1 text-sm sm:text-base">خبرة واسعة</h4>
-                      <p className="font-body text-gray-700 text-xs sm:text-sm">أكثر من 20 سنة في مجال الدعاية والإعلان والإنتاج الفني</p>
+                      <p className="font-body text-gray-700 text-xs sm:text-sm leading-relaxed">أكثر من 20 سنة في مجال الدعاية والإعلان والإنتاج الفني</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl">
-                    <Zap className="w-5 h-5 sm:w-6 sm:h-6 text-purple-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg sm:rounded-xl">
+                    <Zap className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-purple-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <h4 className="font-display font-bold text-gray-900 mb-1 text-sm sm:text-base">سرعة في التنفيذ</h4>
-                      <p className="font-body text-gray-700 text-xs sm:text-sm">نضمن تسليم تصاميمك في الوقت المحدد دون تأخير</p>
+                      <p className="font-body text-gray-700 text-xs sm:text-sm leading-relaxed">نضمن تسليم تصاميمك في الوقت المحدد دون تأخير</p>
                     </div>
                   </div>
                   
-                  <div className="flex items-start gap-3 sm:gap-4 p-3 sm:p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-xl">
-                    <Award className="w-5 h-5 sm:w-6 sm:h-6 text-green-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex items-start gap-2 sm:gap-3 md:gap-4 p-2 sm:p-3 md:p-4 bg-gradient-to-r from-green-50 to-teal-50 rounded-lg sm:rounded-xl">
+                    <Award className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 text-green-500 flex-shrink-0 mt-0.5" />
                     <div>
                       <h4 className="font-display font-bold text-gray-900 mb-1 text-sm sm:text-base">جودة مضمونة</h4>
-                      <p className="font-body text-gray-700 text-xs sm:text-sm">تصاميم احترافية تواكب أحدث الاتجاهات العالمية</p>
+                      <p className="font-body text-gray-700 text-xs sm:text-sm leading-relaxed">تصاميم احترافية تواكب أحدث الاتجاهات العالمية</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="bg-gradient-to-r from-red-500 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
-                  <h4 className="font-display font-bold text-base sm:text-lg mb-2">خدماتنا الشاملة</h4>
+                <div className="bg-gradient-to-r from-red-500 to-purple-600 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 text-white">
+                  <h4 className="font-display font-bold text-sm sm:text-base md:text-lg mb-2">خدماتنا الشاملة</h4>
                   <div className="grid grid-cols-2 gap-1 sm:gap-2 text-xs sm:text-sm">
                     <span className="font-body">• تصميم الشعارات</span>
                     <span className="font-body">• الهوية البصرية</span>
@@ -169,17 +178,17 @@ const DesignOrderForm = () => {
             </Card>
           </div>
 
-          {/* Right Side - Order Form */}
-          <Card className="bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md border-0 shadow-2xl sticky top-4 order-1 lg:order-2">
-            <CardHeader className="text-center p-4 sm:p-6">
-              <CardTitle className="font-display text-2xl sm:text-3xl text-gray-900 flex items-center justify-center gap-3">
-                <FileText className="w-6 h-6 sm:w-8 sm:h-8 text-red-500" />
+          {/* Order Form - Mobile-first sticky behavior */}
+          <Card className="bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md border-0 shadow-2xl lg:sticky lg:top-4 order-1 lg:order-2">
+            <CardHeader className="text-center p-3 sm:p-4 md:p-6">
+              <CardTitle className="font-display text-xl sm:text-2xl md:text-3xl text-gray-900 flex items-center justify-center gap-2 sm:gap-3">
+                <FileText className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-red-500" />
                 اطلب تصميمك الآن
               </CardTitle>
               <p className="font-body text-gray-600 mt-2 text-sm sm:text-base">أرسل بياناتك وسنتواصل معك فوراً</p>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+            <CardContent className="p-3 sm:p-4 md:p-6">
+              <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="name" className="font-display text-gray-800 flex items-center gap-2 font-semibold text-sm sm:text-base">
                     <User className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
@@ -192,7 +201,7 @@ const DesignOrderForm = () => {
                     value={formData.name}
                     onChange={handleInputChange}
                     placeholder="أدخل اسمك الكامل"
-                    className="font-body h-12 sm:h-14 text-base sm:text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl"
+                    className="font-body h-10 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg border-2 border-gray-200 focus:border-red-400 rounded-lg sm:rounded-xl"
                     required
                   />
                 </div>
@@ -209,7 +218,7 @@ const DesignOrderForm = () => {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="09xxxxxxxx"
-                    className="font-body h-12 sm:h-14 text-base sm:text-lg border-2 border-gray-200 focus:border-red-400 rounded-xl"
+                    className="font-body h-10 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg border-2 border-gray-200 focus:border-red-400 rounded-lg sm:rounded-xl"
                     required
                   />
                 </div>
@@ -224,7 +233,7 @@ const DesignOrderForm = () => {
                     name="designType"
                     value={formData.designType}
                     onChange={handleInputChange}
-                    className="w-full h-12 sm:h-14 px-4 rounded-xl border-2 border-gray-200 font-body bg-white focus:outline-none focus:border-red-400 text-base sm:text-lg"
+                    className="w-full h-10 sm:h-12 md:h-14 px-3 sm:px-4 rounded-lg sm:rounded-xl border-2 border-gray-200 font-body bg-white focus:outline-none focus:border-red-400 text-sm sm:text-base md:text-lg"
                     required
                   >
                     <option value="">اختر نوع التصميم</option>
@@ -244,7 +253,7 @@ const DesignOrderForm = () => {
                     value={formData.description}
                     onChange={handleInputChange}
                     placeholder="اكتب هنا تفاصيل التصميم بدقة: الألوان المفضلة، النص المطلوب، الأسلوب، أي ملاحظات خاصة..."
-                    className="font-body min-h-[120px] sm:min-h-[140px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-xl text-base sm:text-lg"
+                    className="font-body min-h-[100px] sm:min-h-[120px] md:min-h-[140px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-lg sm:rounded-xl text-sm sm:text-base md:text-lg"
                     required
                   />
                 </div>
@@ -252,9 +261,9 @@ const DesignOrderForm = () => {
                 <Button
                   type="submit"
                   size="lg"
-                  className="w-full font-display text-lg sm:text-xl py-6 sm:py-8 bg-gradient-to-r from-red-500 via-purple-500 to-blue-600 hover:from-red-600 hover:via-purple-600 hover:to-blue-700 transform hover:scale-105 transition-all duration-300 shadow-2xl rounded-xl"
+                  className="w-full font-display text-base sm:text-lg md:text-xl py-4 sm:py-6 md:py-8 bg-gradient-to-r from-red-500 via-purple-500 to-blue-600 hover:from-red-600 hover:via-purple-600 hover:to-blue-700 transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl rounded-lg sm:rounded-xl"
                 >
-                  <Send className="w-5 h-5 sm:w-6 sm:h-6 ml-3" />
+                  <Send className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-2 sm:ml-3" />
                   إرسال الطلب عبر واتساب
                 </Button>
 
@@ -269,13 +278,13 @@ const DesignOrderForm = () => {
           </Card>
         </div>
 
-        {/* Bottom Section */}
-        <div className="text-center mt-12 sm:mt-16">
-          <div className="bg-gradient-to-r from-red-500/10 via-purple-500/10 to-blue-500/10 rounded-2xl p-6 sm:p-8 backdrop-blur-sm mx-2">
-            <h3 className="font-display font-bold text-xl sm:text-2xl text-gray-900 mb-3 sm:mb-4">
+        {/* Bottom Section - Mobile-optimized */}
+        <div className="text-center mt-8 sm:mt-12 md:mt-16">
+          <div className="bg-gradient-to-r from-red-500/10 via-purple-500/10 to-blue-500/10 rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 backdrop-blur-sm mx-auto max-w-4xl">
+            <h3 className="font-display font-bold text-lg sm:text-xl md:text-2xl text-gray-900 mb-2 sm:mb-3 md:mb-4">
               أوركال للدعاية والإعلان والإنتاج الفني
             </h3>
-            <p className="font-body text-gray-700 mb-3 sm:mb-4 text-sm sm:text-base px-2">
+            <p className="font-body text-gray-700 mb-2 sm:mb-3 md:mb-4 text-sm sm:text-base px-2 leading-relaxed">
               نحن نؤمن بأن كل علامة تجارية تستحق هوية بصرية مميزة تعكس شخصيتها وتجذب جمهورها
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-xs sm:text-sm text-gray-600">
