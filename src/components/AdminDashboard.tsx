@@ -110,13 +110,16 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   });
 
   if (selectedOrderId) {
-    return (
-      <ChatWindow
-        orderId={selectedOrderId}
-        currentUser={user}
-        onBack={() => setSelectedOrderId(null)}
-      />
-    );
+    const selectedOrder = orders.find(order => order.id === selectedOrderId);
+    if (selectedOrder) {
+      return (
+        <ChatWindow
+          user={user}
+          order={selectedOrder}
+          onClose={() => setSelectedOrderId(null)}
+        />
+      );
+    }
   }
 
   return (

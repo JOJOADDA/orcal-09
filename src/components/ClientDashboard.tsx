@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -74,13 +73,16 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   };
 
   if (selectedOrderId) {
-    return (
-      <ChatWindow
-        orderId={selectedOrderId}
-        currentUser={user}
-        onBack={() => setSelectedOrderId(null)}
-      />
-    );
+    const selectedOrder = orders.find(order => order.id === selectedOrderId);
+    if (selectedOrder) {
+      return (
+        <ChatWindow
+          user={user}
+          order={selectedOrder}
+          onClose={() => setSelectedOrderId(null)}
+        />
+      );
+    }
   }
 
   return (
