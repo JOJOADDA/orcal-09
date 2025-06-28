@@ -1,12 +1,56 @@
 
-import DesignOrderForm from '@/components/DesignOrderForm';
+import { useState, useEffect } from 'react';
+import { chatService } from '@/services/chatService';
+import { User } from '@/types/chat';
+import LoginForm from '@/components/LoginForm';
+import ClientDashboard from '@/components/ClientDashboard';
+import AdminDashboard from '@/components/AdminDashboard';
 
 const Index = () => {
-  return (
-    <div className="min-h-screen font-arabic">
-      <DesignOrderForm />
-    </div>
-  );
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Check if user is already logged in
+    const user = chatService.getCurrentUser();
+    setCurrentUser(user);
+    setIsLoading(false);
+  }, []);
+
+  const handleLogin = (userId: string) => {
+    const user = chatService.getUserById(userId);
+    setCurrentUser(user || null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('current_user_id');
+    setCurrentUser(null);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <img 
+            src="/lovable-uploads/65aa4b7b-e60a-4160-bf45-4c057f62c70a.png" 
+            alt="أوركال" 
+            className="w-16 h-16 mx-auto mb-4 object-contain animate-pulse"
+          />
+          <p className="text-gray-600">جاري التحميل...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <LoginForm onLogin={handleLogin} />;
+  }
+
+  if (currentUser.role === 'admin') {
+    return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
+  }
+
+  return <ClientDashboard user={currentUser} onLogout={handleLogout} />;
 };
 
 export default Index;
