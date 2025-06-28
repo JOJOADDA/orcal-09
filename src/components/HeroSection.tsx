@@ -1,11 +1,8 @@
+
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Star, Users, Award, Clock, CheckCircle, User } from 'lucide-react';
+import { ArrowLeft, Star, Users, Award, Clock, CheckCircle } from 'lucide-react';
 
-interface HeroSectionProps {
-  onDashboardClick?: () => void;
-}
-
-const HeroSection = ({ onDashboardClick }: HeroSectionProps) => {
+const HeroSection = () => {
   const benefits = [
     { icon: Clock, text: 'تسليم سريع خلال 24-48 ساعة' },
     { icon: CheckCircle, text: 'جودة احترافية مضمونة' },
@@ -61,16 +58,6 @@ const HeroSection = ({ onDashboardClick }: HeroSectionProps) => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4">
-              {onDashboardClick ? (
-                <Button 
-                  size="lg" 
-                  onClick={onDashboardClick}
-                  className="font-cairo text-xl px-12 py-8 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 transform hover:scale-105 transition-all duration-200 shadow-xl"
-                >
-                  <User className="w-6 h-6 ml-3" />
-                  دخول لوحة التحكم
-                </Button>
-              ) : null}
               <Button 
                 size="lg" 
                 onClick={scrollToOrder}
