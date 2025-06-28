@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Palette, Send, User, Phone, FileText, Sparkles } from 'lucide-react';
+import { Send, User, Phone, FileText, Palette } from 'lucide-react';
 
 interface FormData {
   name: string;
@@ -87,75 +87,44 @@ const DesignOrderForm = () => {
   };
 
   const designTypes = [
-    { value: 'لوجو', label: '🎯 تصميم شعار (لوجو)', icon: '🎯' },
-    { value: 'بوستر', label: '📄 تصميم بوستر إعلاني', icon: '📄' },
-    { value: 'بروشور', label: '📋 تصميم بروشور', icon: '📋' },
-    { value: 'كرت شخصي', label: '💳 تصميم كرت شخصي', icon: '💳' },
-    { value: 'هوية بصرية', label: '🏢 تصميم هوية بصرية كاملة', icon: '🏢' },
-    { value: 'منشورات سوشيال ميديا', label: '📱 منشورات سوشيال ميديا', icon: '📱' },
-    { value: 'تصميم موقع', label: '🌐 تصميم موقع إلكتروني', icon: '🌐' },
-    { value: 'أخرى', label: '✨ أخرى (حدد في الوصف)', icon: '✨' },
+    { value: 'لوجو', label: '🎯 تصميم شعار (لوجو)' },
+    { value: 'بوستر', label: '📄 تصميم بوستر إعلاني' },
+    { value: 'بروشور', label: '📋 تصميم بروشور' },
+    { value: 'كرت شخصي', label: '💳 تصميم كرت شخصي' },
+    { value: 'هوية بصرية', label: '🏢 تصميم هوية بصرية كاملة' },
+    { value: 'منشورات سوشيال ميديا', label: '📱 منشورات سوشيال ميديا' },
+    { value: 'تصميم موقع', label: '🌐 تصميم موقع إلكتروني' },
+    { value: 'أخرى', label: '✨ أخرى (حدد في الوصف)' },
   ];
 
   return (
-    <section className="min-h-screen py-20 px-4 bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 relative overflow-hidden">
-      {/* Background Elements */}
-      <div className="absolute top-0 left-0 w-96 h-96 bg-purple-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
-      <div className="absolute top-0 right-0 w-96 h-96 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
-      <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-96 h-96 bg-pink-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-2000"></div>
-
-      <div className="max-w-2xl mx-auto relative z-10">
-        {/* Header Section */}
-        <div className="text-center mb-12 space-y-6">
-          <div className="inline-flex items-center space-x-2 rtl:space-x-reverse bg-white/80 backdrop-blur-sm rounded-full px-6 py-3 shadow-lg">
-            <Sparkles className="w-6 h-6 text-yellow-500" />
-            <span className="font-arabic text-purple-600 font-bold text-lg">شركة أوركال للدعاية والإعلان</span>
-            <Palette className="w-6 h-6 text-purple-500" />
-          </div>
-          
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 bg-clip-text text-transparent font-arabic leading-tight">
-            اطلب تصميمك الاحترافي
+    <section className="min-h-screen py-8 px-4 bg-gradient-to-br from-blue-50 to-purple-50">
+      <div className="max-w-lg mx-auto">
+        {/* Simple Header */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl md:text-3xl font-bold text-purple-700 font-arabic mb-2">
+            🎨 شركة أوركال للدعاية والإعلان
           </h1>
-          
-          <p className="text-xl text-gray-600 font-arabic max-w-lg mx-auto leading-relaxed">
-            املأ النموذج أدناه وسنتواصل معك فوراً عبر واتساب لتحويل أفكارك إلى تصاميم مذهلة
+          <p className="text-gray-600 font-arabic">
+            اطلب تصميمك الاحترافي الآن
           </p>
-
-          {/* Trust Indicators */}
-          <div className="flex items-center justify-center space-x-8 rtl:space-x-reverse text-sm">
-            <div className="flex items-center space-x-1 rtl:space-x-reverse text-green-600">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              <span className="font-arabic font-medium">متاح الآن</span>
-            </div>
-            <div className="text-gray-500 font-arabic">⭐ 4.9/5 تقييم ممتاز</div>
-            <div className="text-gray-500 font-arabic">🚀 تسليم سريع</div>
-          </div>
         </div>
 
-        {/* Form Card */}
-        <Card className="shadow-2xl border-0 bg-white/95 backdrop-blur-sm overflow-hidden">
-          <div className="bg-gradient-to-r from-purple-500 via-blue-500 to-pink-500 p-1">
-            <div className="bg-white rounded-t-lg">
-              <CardHeader className="text-center space-y-4 bg-gradient-to-br from-purple-50 to-blue-50 rounded-t-lg">
-                <CardTitle className="text-3xl font-bold text-gray-800 font-arabic flex items-center justify-center space-x-3 rtl:space-x-reverse">
-                  <Palette className="w-8 h-8 text-purple-500" />
-                  <span>نموذج طلب التصميم</span>
-                  <Sparkles className="w-8 h-8 text-pink-500" />
-                </CardTitle>
-                <p className="text-gray-600 font-arabic text-lg">
-                  جميع الحقول مطلوبة للحصول على أفضل خدمة
-                </p>
-              </CardHeader>
-            </div>
-          </div>
+        {/* Simple Form Card */}
+        <Card className="shadow-lg bg-white">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-bold text-gray-800 font-arabic text-center">
+              نموذج طلب التصميم
+            </CardTitle>
+          </CardHeader>
 
-          <CardContent className="p-8 space-y-8">
-            <form onSubmit={handleSubmit} className="space-y-8">
+          <CardContent className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Name Field */}
-              <div className="space-y-3">
-                <Label htmlFor="name" className="font-arabic font-bold text-gray-700 text-lg flex items-center space-x-2 rtl:space-x-reverse">
-                  <User className="w-5 h-5 text-purple-500" />
-                  <span>اسم العميل الكريم</span>
+              <div className="space-y-2">
+                <Label htmlFor="name" className="font-arabic font-medium text-gray-700 flex items-center gap-2">
+                  <User className="w-4 h-4 text-purple-500" />
+                  الاسم الكريم
                 </Label>
                 <Input
                   id="name"
@@ -163,16 +132,16 @@ const DesignOrderForm = () => {
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="مثال: محمد أحمد علي"
-                  className="font-arabic text-right text-lg py-4 border-2 border-purple-200 focus:border-purple-500 rounded-xl bg-purple-50/50 transition-all duration-300"
+                  className="font-arabic text-right"
                   required
                 />
               </div>
 
               {/* Phone Field */}
-              <div className="space-y-3">
-                <Label htmlFor="phone" className="font-arabic font-bold text-gray-700 text-lg flex items-center space-x-2 rtl:space-x-reverse">
-                  <Phone className="w-5 h-5 text-blue-500" />
-                  <span>رقم الهاتف (واتساب)</span>
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="font-arabic font-medium text-gray-700 flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-blue-500" />
+                  رقم الهاتف (واتساب)
                 </Label>
                 <Input
                   id="phone"
@@ -180,26 +149,26 @@ const DesignOrderForm = () => {
                   value={formData.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
                   placeholder="مثال: 0912345678"
-                  className="font-arabic text-right text-lg py-4 border-2 border-blue-200 focus:border-blue-500 rounded-xl bg-blue-50/50 transition-all duration-300"
+                  className="font-arabic text-right"
                   required
                 />
-                <p className="text-sm text-gray-500 font-arabic">* يجب أن يبدأ بـ 09 ويتكون من 10 أرقام</p>
+                <p className="text-xs text-gray-500 font-arabic">* يجب أن يبدأ بـ 09 ويتكون من 10 أرقام</p>
               </div>
 
               {/* Design Type Field */}
-              <div className="space-y-3">
-                <Label htmlFor="designType" className="font-arabic font-bold text-gray-700 text-lg flex items-center space-x-2 rtl:space-x-reverse">
-                  <Palette className="w-5 h-5 text-pink-500" />
-                  <span>نوع التصميم المطلوب</span>
+              <div className="space-y-2">
+                <Label htmlFor="designType" className="font-arabic font-medium text-gray-700 flex items-center gap-2">
+                  <Palette className="w-4 h-4 text-pink-500" />
+                  نوع التصميم المطلوب
                 </Label>
                 <select
                   id="designType"
                   value={formData.designType}
                   onChange={(e) => handleInputChange('designType', e.target.value)}
-                  className="w-full p-4 border-2 border-pink-200 focus:border-pink-500 rounded-xl font-arabic text-right bg-pink-50/50 text-lg transition-all duration-300 cursor-pointer"
+                  className="w-full p-3 border border-gray-300 rounded-md font-arabic text-right bg-white"
                   required
                 >
-                  <option value="">اختر نوع التصميم المناسب لك</option>
+                  <option value="">اختر نوع التصميم</option>
                   {designTypes.map((type) => (
                     <option key={type.value} value={type.value}>
                       {type.label}
@@ -209,59 +178,54 @@ const DesignOrderForm = () => {
               </div>
 
               {/* Description Field */}
-              <div className="space-y-3">
-                <Label htmlFor="description" className="font-arabic font-bold text-gray-700 text-lg flex items-center space-x-2 rtl:space-x-reverse">
-                  <FileText className="w-5 h-5 text-indigo-500" />
-                  <span>تفاصيل التصميم والمتطلبات</span>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="font-arabic font-medium text-gray-700 flex items-center gap-2">
+                  <FileText className="w-4 h-4 text-indigo-500" />
+                  تفاصيل التصميم
                 </Label>
                 <Textarea
                   id="description"
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
-                  placeholder="مثال: أريد تصميم شعار لمطعم يقدم الأكل الشعبي السوداني، الألوان المفضلة الأخضر والأصفر، يجب أن يكون بسيط ومميز ويعكس التراث السوداني..."
-                  className="font-arabic text-right min-h-[150px] text-lg border-2 border-indigo-200 focus:border-indigo-500 rounded-xl bg-indigo-50/50 transition-all duration-300 resize-none"
+                  placeholder="اكتب تفاصيل التصميم المطلوب، الألوان المفضلة، والأفكار الخاصة بك..."
+                  className="font-arabic text-right min-h-[100px] resize-none"
                   required
                 />
-                <p className="text-sm text-gray-500 font-arabic">* اكتب تفاصيل كافية (10 أحرف على الأقل) حتى نتمكن من خدمتك بأفضل شكل</p>
+                <p className="text-xs text-gray-500 font-arabic">* اكتب تفاصيل كافية (10 أحرف على الأقل)</p>
               </div>
 
               {/* Submit Button */}
               <Button
                 type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 via-blue-600 to-pink-600 hover:from-purple-700 hover:via-blue-700 hover:to-pink-700 text-white font-arabic font-bold py-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-2xl text-xl"
+                className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white font-arabic font-bold py-3 text-lg"
               >
-                <Send className="w-6 h-6 ml-3" />
-                إرسال الطلب عبر واتساب الآن
-                <Sparkles className="w-6 h-6 mr-3" />
+                <Send className="w-5 h-5 ml-2" />
+                إرسال الطلب عبر واتساب
               </Button>
             </form>
 
-            {/* Additional Info */}
-            <div className="mt-8 p-6 bg-gradient-to-r from-green-50 to-blue-50 rounded-xl border border-green-200">
-              <div className="text-center space-y-2">
-                <p className="text-green-700 font-arabic font-bold">🎉 مبروك! أنت على بُعد خطوة واحدة من الحصول على تصميمك</p>
-                <p className="text-gray-600 font-arabic text-sm">سنتواصل معك خلال دقائق عبر واتساب لتأكيد طلبك ومناقشة التفاصيل</p>
-              </div>
+            {/* Simple Info */}
+            <div className="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+              <p className="text-green-700 font-arabic font-medium text-center text-sm">
+                ✅ سنتواصل معك خلال دقائق عبر واتساب
+              </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Footer Features */}
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
-            <div className="text-4xl mb-3">⚡</div>
-            <h3 className="font-arabic font-bold text-lg text-gray-800 mb-2">تسليم سريع</h3>
-            <p className="text-gray-600 font-arabic text-sm">خلال 24-48 ساعة</p>
+        {/* Simple Features */}
+        <div className="mt-6 grid grid-cols-3 gap-3 text-center">
+          <div className="bg-white p-3 rounded-lg shadow-sm">
+            <div className="text-2xl mb-1">⚡</div>
+            <p className="font-arabic text-xs text-gray-600">تسليم سريع</p>
           </div>
-          <div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
-            <div className="text-4xl mb-3">✨</div>
-            <h3 className="font-arabic font-bold text-lg text-gray-800 mb-2">جودة عالية</h3>
-            <p className="text-gray-600 font-arabic text-sm">تصاميم احترافية مميزة</p>
+          <div className="bg-white p-3 rounded-lg shadow-sm">
+            <div className="text-2xl mb-1">✨</div>
+            <p className="font-arabic text-xs text-gray-600">جودة عالية</p>
           </div>
-          <div className="text-center p-6 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg">
-            <div className="text-4xl mb-3">🎯</div>
-            <h3 className="font-arabic font-bold text-lg text-gray-800 mb-2">ضمان الرضا</h3>
-            <p className="text-gray-600 font-arabic text-sm">تعديلات مجانية حتى الرضا</p>
+          <div className="bg-white p-3 rounded-lg shadow-sm">
+            <div className="text-2xl mb-1">🎯</div>
+            <p className="font-arabic text-xs text-gray-600">ضمان الرضا</p>
           </div>
         </div>
       </div>
