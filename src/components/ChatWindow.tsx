@@ -3,43 +3,40 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Send, User, Bot, Clock, CheckCircle, Truck, AlertCircle } from 'lucide-react';
+import { X, Send, MessageSquare, Paperclip, Download, Eye, Image, File } from 'lucide-react';
 import { chatService } from '@/services/chatService';
-import { ChatMessage, User as UserType, DesignOrder } from '@/types/chat';
+import { User, ChatMessage, DesignOrder } from '@/types/chat';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatWindowProps {
-  orderId: string;
-  currentUser: UserType;
-  onBack: () => void;
+  user: User;
+  order: DesignOrder;
+  onClose: () => void;
 }
 
-const ChatWindow = ({ orderId, currentUser, onBack }: ChatWindowProps) => {
+const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [order, setOrder] = useState<DesignOrder | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    loadData();
-    markMessagesAsRead();
-  }, [orderId]);
+    loadMessages();
+    const interval = setInterval(loadMessages, 2000); // Poll for new messages
+    return () => clearInterval(interval);
+  }, [order.id]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const loadData = () => {
-    const orderData = chatService.getAllOrders().find(o => o.id === orderId);
-    const orderMessages = chatService.getMessagesByOrderId(orderId);
-    
-    setOrder(orderData || null);
+  const loadMessages = () => {
+    const orderMessages = chatService.getMessagesByOrderId(order.id);
     setMessages(orderMessages);
-  };
-
-  const markMessagesAsRead = () => {
-    chatService.markMessagesAsRead(orderId, currentUser.id);
+    
+    // Mark messages as read
+    chatService.markMessagesAsRead(order.id, user.id);
   };
 
   const scrollToBottom = () => {
@@ -54,41 +51,28 @@ const ChatWindow = ({ orderId, currentUser, onBack }: ChatWindowProps) => {
     setIsLoading(true);
     
     try {
-      const message = chatService.sendMessage(orderId, currentUser.id, newMessage.trim());
-      setMessages(prev => [...prev, message]);
+      chatService.sendMessage(order.id, user.id, newMessage);
       setNewMessage('');
-      
-      // Simulate admin response for demo
-      if (currentUser.role === 'client') {
-        setTimeout(() => {
-          const adminResponse = chatService.sendMessage(
-            orderId, 
-            'admin-1', 
-            'شكراً لتواصلك معنا! سنقوم بمراجعة طلبك والرد عليك قريباً.'
-          );
-          setMessages(prev => [...prev, adminResponse]);
-        }, 2000);
-      }
+      loadMessages();
     } catch (error) {
-      console.error('Error sending message:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في إرسال الرسالة",
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const getStatusIcon = (status: DesignOrder['status']) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-4 h-4" />;
-      case 'in-progress':
-        return <AlertCircle className="w-4 h-4" />;
-      case 'completed':
-        return <CheckCircle className="w-4 h-4" />;
-      case 'delivered':
-        return <Truck className="w-4 h-4" />;
-      default:
-        return <Clock className="w-4 h-4" />;
-    }
+  const getStatusColor = (status: DesignOrder['status']) => {
+    const colors = {
+      'pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'in-progress': 'bg-blue-100 text-blue-800 border-blue-200',
+      'completed': 'bg-green-100 text-green-800 border-green-200',
+      'delivered': 'bg-purple-100 text-purple-800 border-purple-200'
+    };
+    return colors[status];
   };
 
   const getStatusText = (status: DesignOrder['status']) => {
@@ -101,151 +85,168 @@ const ChatWindow = ({ orderId, currentUser, onBack }: ChatWindowProps) => {
     return statusMap[status];
   };
 
-  const getStatusColor = (status: DesignOrder['status']) => {
-    switch (status) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'in-progress':
-        return 'bg-blue-100 text-blue-800';
-      case 'completed':
-        return 'bg-green-100 text-green-800';
-      case 'delivered':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  if (!order) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-500">جاري تحميل بيانات الطلب...</p>
-        </div>
-      </div>
-    );
-  }
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      return <Image className="w-4 h-4 text-blue-500" />;
+    }
+    return <File className="w-4 h-4 text-gray-500" />;
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50">
-      <div className="max-w-4xl mx-auto p-4 space-y-4">
-        {/* Header */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onBack}
-                  className="h-8 w-8 p-0"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </Button>
-                <div>
-                  <CardTitle className="text-xl">{order.designType}</CardTitle>
-                  <p className="text-gray-600">الطلب #{order.id.slice(-8)}</p>
-                </div>
-              </div>
-              <Badge className={`${getStatusColor(order.status)} flex items-center gap-1`}>
-                {getStatusIcon(order.status)}
-                {getStatusText(order.status)}
-              </Badge>
-            </div>
-          </CardHeader>
-        </Card>
-
-        {/* Order Details */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-              <div>
-                <span className="font-semibold text-gray-700">تاريخ الإنشاء:</span>
-                <span className="mr-2">{new Date(order.createdAt).toLocaleString('ar-EG')}</span>
-              </div>
-              <div>
-                <span className="font-semibold text-gray-700">آخر تحديث:</span>
-                <span className="mr-2">{new Date(order.updatedAt).toLocaleString('ar-EG')}</span>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <Card className="w-full max-w-4xl h-[80vh] bg-white shadow-2xl flex flex-col">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-t-lg">
+          <div className="flex items-center gap-3">
+            <MessageSquare className="w-6 h-6 text-blue-500" />
+            <div>
+              <CardTitle className="text-lg text-gray-900">
+                دردشة الطلب: {order.designType}
+              </CardTitle>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
+                  {getStatusText(order.status)}
+                </span>
+                <span className="text-sm text-gray-500">
+                  {new Date(order.createdAt).toLocaleDateString('ar')}
+                </span>
               </div>
             </div>
-            <div className="mt-3">
-              <span className="font-semibold text-gray-700">التفاصيل:</span>
-              <p className="text-gray-600 mt-1">{order.description}</p>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Chat Messages */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="p-0">
-            <div className="h-96 overflow-y-auto p-4 space-y-4">
-              {messages.map((message) => (
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            className="h-8 w-8 p-0 hover:bg-red-100"
+          >
+            <X className="w-4 h-4" />
+          </Button>
+        </CardHeader>
+        
+        <CardContent className="flex-1 flex flex-col p-0">
+          {/* Messages Area */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.senderId === user.id ? 'justify-end' : 'justify-start'}`}
+              >
                 <div
-                  key={message.id}
-                  className={`flex ${
-                    message.senderId === currentUser.id ? 'justify-end' : 'justify-start'
+                  className={`max-w-[70%] rounded-2xl p-3 ${
+                    message.senderId === user.id
+                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                      : message.type === 'system'
+                      ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                      : 'bg-white text-gray-900 shadow-md border'
                   }`}
                 >
-                  <div
-                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                      message.senderId === currentUser.id
-                        ? 'bg-gradient-to-r from-red-500 to-purple-600 text-white'
-                        : message.type === 'system'
-                        ? 'bg-gray-100 text-gray-700 border'
-                        : 'bg-white border shadow-sm'
-                    }`}
-                  >
-                    {message.senderId !== currentUser.id && message.type !== 'system' && (
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
-                          {message.senderRole === 'admin' ? (
-                            <Bot className="w-3 h-3 text-white" />
-                          ) : (
-                            <User className="w-3 h-3 text-white" />
-                          )}
-                        </div>
-                        <span className="text-xs font-semibold text-gray-700">
-                          {message.senderName}
-                        </span>
-                      </div>
-                    )}
-                    <p className="text-sm">{message.content}</p>
-                    <div className="text-xs opacity-70 mt-1">
-                      {new Date(message.timestamp).toLocaleTimeString('ar-EG', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+                  {message.type !== 'system' && (
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-medium opacity-75">
+                        {message.senderName}
+                      </span>
+                      <span className="text-xs opacity-60">
+                        {new Date(message.timestamp).toLocaleTimeString('ar', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </span>
                     </div>
-                  </div>
+                  )}
+                  
+                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  
+                  {/* File Attachments */}
+                  {message.files && message.files.length > 0 && (
+                    <div className="mt-3 space-y-2">
+                      {message.files.map((file) => (
+                        <div
+                          key={file.id}
+                          className={`flex items-center gap-2 p-2 rounded-lg ${
+                            message.senderId === user.id ? 'bg-white/20' : 'bg-gray-100'
+                          }`}
+                        >
+                          {getFileIcon(file.name)}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium truncate">{file.name}</p>
+                            <p className="text-xs opacity-75">{formatFileSize(file.size)}</p>
+                          </div>
+                          <div className="flex gap-1">
+                            {file.type === 'image' && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => window.open(file.url, '_blank')}
+                              >
+                                <Eye className="w-3 h-3" />
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => {
+                                const link = document.createElement('a');
+                                link.href = file.url;
+                                link.download = file.name;
+                                link.click();
+                              }}
+                            >
+                              <Download className="w-3 h-3" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </div>
 
-        {/* Message Input */}
-        <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-          <CardContent className="p-4">
-            <form onSubmit={handleSendMessage} className="flex gap-3">
-              <Input
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="اكتب رسالتك هنا..."
-                className="flex-1 h-12"
-                disabled={isLoading}
-              />
+          {/* Message Input */}
+          <div className="border-t bg-white p-4">
+            <form onSubmit={handleSendMessage} className="flex gap-2">
+              <div className="flex-1 relative">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="اكتب رسالتك هنا..."
+                  className="pr-12 h-12 rounded-xl border-2 border-gray-200 focus:border-blue-400"
+                  disabled={isLoading}
+                  dir="rtl"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                  disabled={isLoading}
+                >
+                  <Paperclip className="w-4 h-4 text-gray-400" />
+                </Button>
+              </div>
               <Button
                 type="submit"
-                disabled={isLoading || !newMessage.trim()}
-                className="h-12 px-6 bg-gradient-to-r from-red-500 to-purple-600 hover:from-red-600 hover:to-purple-700"
+                disabled={!newMessage.trim() || isLoading}
+                className="h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl"
               >
                 <Send className="w-4 h-4" />
               </Button>
             </form>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

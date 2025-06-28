@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Send, User, Phone, Palette, FileText, Clock } from 'lucide-react';
+import { Send, User, Phone, Palette, FileText, Clock, Star, Shield } from 'lucide-react';
 
 const OrderForm = () => {
   const [formData, setFormData] = useState({
@@ -64,19 +64,38 @@ const OrderForm = () => {
   };
 
   return (
-    <Card className="bg-gradient-to-br from-white/95 to-white/85 backdrop-blur-md border-0 shadow-2xl lg:sticky lg:top-4">
-      <CardHeader className="text-center p-3 sm:p-4 md:p-6">
-        <CardTitle className="font-display text-xl sm:text-2xl md:text-3xl text-gray-900 flex items-center justify-center gap-2 sm:gap-3">
-          <FileText className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-red-500" />
+    <Card className="bg-gradient-to-br from-white/95 to-white/90 backdrop-blur-md border-0 shadow-2xl lg:sticky lg:top-4 overflow-hidden">
+      <CardHeader className="text-center p-4 sm:p-6 bg-gradient-to-r from-red-50 via-purple-50 to-blue-50">
+        <CardTitle className="font-display text-xl sm:text-2xl md:text-3xl text-gray-900 flex items-center justify-center gap-2 sm:gap-3 mb-2">
+          <div className="p-2 bg-gradient-to-r from-red-500 to-purple-600 rounded-full">
+            <FileText className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-white" />
+          </div>
           اطلب تصميمك الآن
         </CardTitle>
-        <p className="font-body text-gray-600 mt-2 text-sm sm:text-base">أرسل بياناتك وسنتواصل معك فوراً</p>
+        <p className="font-body text-gray-600 text-sm sm:text-base leading-relaxed">
+          أرسل بياناتك وسنتواصل معك فوراً
+        </p>
+        
+        {/* Trust Indicators */}
+        <div className="flex items-center justify-center gap-4 mt-4 text-xs text-gray-500">
+          <div className="flex items-center gap-1">
+            <Shield className="w-3 h-3 text-green-500" />
+            <span>آمن ومضمون</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Star className="w-3 h-3 text-yellow-500" />
+            <span>+500 عميل راضي</span>
+          </div>
+        </div>
       </CardHeader>
-      <CardContent className="p-3 sm:p-4 md:p-6">
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4 md:space-y-6">
+      
+      <CardContent className="p-4 sm:p-6">
+        <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
           <div className="space-y-2">
             <Label htmlFor="name" className="font-display text-gray-800 flex items-center gap-2 font-semibold text-sm sm:text-base">
-              <User className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+              <div className="p-1 bg-red-100 rounded-full">
+                <User className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+              </div>
               اسم العميل *
             </Label>
             <Input
@@ -86,14 +105,16 @@ const OrderForm = () => {
               value={formData.name}
               onChange={handleInputChange}
               placeholder="أدخل اسمك الكامل"
-              className="font-body h-10 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg border-2 border-gray-200 focus:border-red-400 rounded-lg sm:rounded-xl"
+              className="font-body h-12 sm:h-14 text-sm sm:text-base border-2 border-gray-200 focus:border-red-400 rounded-xl transition-all duration-300 hover:border-gray-300"
               required
             />
           </div>
           
           <div className="space-y-2">
             <Label htmlFor="phone" className="font-display text-gray-800 flex items-center gap-2 font-semibold text-sm sm:text-base">
-              <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+              <div className="p-1 bg-red-100 rounded-full">
+                <Phone className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+              </div>
               رقم الهاتف *
             </Label>
             <Input
@@ -103,14 +124,16 @@ const OrderForm = () => {
               value={formData.phone}
               onChange={handleInputChange}
               placeholder="09xxxxxxxx"
-              className="font-body h-10 sm:h-12 md:h-14 text-sm sm:text-base md:text-lg border-2 border-gray-200 focus:border-red-400 rounded-lg sm:rounded-xl"
+              className="font-body h-12 sm:h-14 text-sm sm:text-base border-2 border-gray-200 focus:border-red-400 rounded-xl transition-all duration-300 hover:border-gray-300"
               required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="designType" className="font-display text-gray-800 flex items-center gap-2 font-semibold text-sm sm:text-base">
-              <Palette className="w-4 h-4 sm:w-5 sm:h-5 text-red-500" />
+              <div className="p-1 bg-red-100 rounded-full">
+                <Palette className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+              </div>
               نوع التصميم المطلوب *
             </Label>
             <select
@@ -118,7 +141,7 @@ const OrderForm = () => {
               name="designType"
               value={formData.designType}
               onChange={handleInputChange}
-              className="w-full h-10 sm:h-12 md:h-14 px-3 sm:px-4 rounded-lg sm:rounded-xl border-2 border-gray-200 font-body bg-white focus:outline-none focus:border-red-400 text-sm sm:text-base md:text-lg"
+              className="w-full h-12 sm:h-14 px-4 rounded-xl border-2 border-gray-200 font-body bg-white focus:outline-none focus:border-red-400 text-sm sm:text-base transition-all duration-300 hover:border-gray-300"
               required
             >
               <option value="">اختر نوع التصميم</option>
@@ -138,7 +161,7 @@ const OrderForm = () => {
               value={formData.description}
               onChange={handleInputChange}
               placeholder="اكتب هنا تفاصيل التصميم بدقة: الألوان المفضلة، النص المطلوب، الأسلوب، أي ملاحظات خاصة..."
-              className="font-body min-h-[100px] sm:min-h-[120px] md:min-h-[140px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-lg sm:rounded-xl text-sm sm:text-base md:text-lg"
+              className="font-body min-h-[120px] sm:min-h-[140px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-xl text-sm sm:text-base transition-all duration-300 hover:border-gray-300"
               required
             />
           </div>
@@ -146,17 +169,19 @@ const OrderForm = () => {
           <Button
             type="submit"
             size="lg"
-            className="w-full font-display text-base sm:text-lg md:text-xl py-4 sm:py-6 md:py-8 bg-gradient-to-r from-red-500 via-purple-500 to-blue-600 hover:from-red-600 hover:via-purple-600 hover:to-blue-700 transform hover:scale-105 active:scale-95 transition-all duration-300 shadow-2xl rounded-lg sm:rounded-xl"
+            className="w-full font-display text-base sm:text-lg py-6 sm:py-8 bg-gradient-to-r from-red-500 via-purple-500 to-blue-600 hover:from-red-600 hover:via-purple-600 hover:to-blue-700 transform hover:scale-[1.02] active:scale-98 transition-all duration-300 shadow-2xl rounded-xl group"
           >
-            <Send className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 ml-2 sm:ml-3" />
+            <Send className="w-4 h-4 sm:w-5 sm:h-5 ml-2 sm:ml-3 group-hover:translate-x-1 transition-transform" />
             إرسال الطلب عبر واتساب
           </Button>
 
           <div className="text-center pt-2 sm:pt-4">
-            <p className="font-body text-gray-600 text-xs sm:text-sm flex items-center justify-center gap-2">
-              <Clock className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
-              سنرد عليك خلال دقائق معدودة
-            </p>
+            <div className="flex items-center justify-center gap-2 bg-green-50 rounded-xl p-3">
+              <Clock className="w-4 h-4 text-green-500 animate-pulse" />
+              <p className="font-body text-green-700 text-xs sm:text-sm font-medium">
+                سنرد عليك خلال دقائق معدودة
+              </p>
+            </div>
           </div>
         </form>
       </CardContent>

@@ -5,9 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Upload, FileText, Palette } from 'lucide-react';
+import { X, Upload, FileText, Palette, File, Image, Trash2 } from 'lucide-react';
 import { chatService } from '@/services/chatService';
-import { User } from '@/types/chat';
+import { User, OrderFile } from '@/types/chat';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreateOrderDialogProps {
@@ -23,6 +23,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
     priority: 'medium' as 'low' | 'medium' | 'high',
     estimatedBudget: ''
   });
+  const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
@@ -47,6 +48,33 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
     }));
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      setFiles(prev => [...prev, ...newFiles]);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+      return <Image className="w-4 h-4 text-blue-500" />;
+    }
+    return <File className="w-4 h-4 text-gray-500" />;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -62,6 +90,16 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
     setIsLoading(true);
     
     try {
+      // Create order files from uploaded files
+      const orderFiles: OrderFile[] = files.map(file => ({
+        id: `file-${Date.now()}-${Math.random()}`,
+        name: file.name,
+        url: URL.createObjectURL(file), // In real app, upload to cloud storage
+        type: file.type.startsWith('image/') ? 'image' : 'document',
+        size: file.size,
+        uploadedAt: new Date()
+      }));
+
       const order = chatService.createOrder({
         clientId: user.id,
         clientName: user.name,
@@ -70,6 +108,21 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
         description: formData.description,
         priority: formData.priority
       });
+
+      // Add files to order
+      orderFiles.forEach(file => {
+        chatService.addFileToOrder(order.id, file);
+      });
+
+      // Send file message if files were uploaded
+      if (orderFiles.length > 0) {
+        chatService.sendMessage(
+          order.id, 
+          user.id, 
+          `تم رفع ${orderFiles.length} ملف(ات) مرفقة مع الطلب`,
+          orderFiles
+        );
+      }
 
       toast({
         title: "تم إنشاء الطلب بنجاح!",
@@ -90,9 +143,9 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-2xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-          <CardTitle className="flex items-center gap-2 text-xl">
+      <Card className="w-full max-w-3xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4 bg-gradient-to-r from-red-50 to-purple-50">
+          <CardTitle className="flex items-center gap-2 text-xl text-gray-900">
             <FileText className="w-6 h-6 text-red-500" />
             إنشاء طلب تصميم جديد
           </CardTitle>
@@ -100,17 +153,17 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="h-8 w-8 p-0"
+            className="h-8 w-8 p-0 hover:bg-red-100"
           >
             <X className="w-4 h-4" />
           </Button>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="p-6">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="designType" className="flex items-center gap-2 font-semibold">
+                <Label htmlFor="designType" className="flex items-center gap-2 font-semibold text-gray-700">
                   <Palette className="w-4 h-4 text-red-500" />
                   نوع التصميم المطلوب *
                 </Label>
@@ -119,7 +172,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
                   name="designType"
                   value={formData.designType}
                   onChange={handleInputChange}
-                  className="w-full h-12 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-red-400"
+                  className="w-full h-12 px-4 rounded-xl border-2 border-gray-200 bg-white focus:outline-none focus:border-red-400 transition-colors"
                   required
                   disabled={isLoading}
                 >
@@ -131,7 +184,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="priority" className="font-semibold">
+                <Label htmlFor="priority" className="font-semibold text-gray-700">
                   الأولوية
                 </Label>
                 <select
@@ -139,7 +192,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
                   name="priority"
                   value={formData.priority}
                   onChange={handleInputChange}
-                  className="w-full h-12 px-3 rounded-lg border border-gray-200 bg-white focus:outline-none focus:border-red-400"
+                  className="w-full h-12 px-4 rounded-xl border-2 border-gray-200 bg-white focus:outline-none focus:border-red-400 transition-colors"
                   disabled={isLoading}
                 >
                   <option value="low">عادية</option>
@@ -150,7 +203,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="font-semibold">
+              <Label htmlFor="description" className="font-semibold text-gray-700">
                 تفاصيل التصميم المطلوب *
               </Label>
               <Textarea
@@ -159,14 +212,14 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
                 value={formData.description}
                 onChange={handleInputChange}
                 placeholder="اكتب هنا تفاصيل التصميم بدقة: الألوان المفضلة، النص المطلوب، الأسلوب، أي ملاحظات خاصة..."
-                className="min-h-[120px] resize-none border-2 border-gray-200 focus:border-red-400"
+                className="min-h-[120px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-xl"
                 required
                 disabled={isLoading}
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="estimatedBudget" className="font-semibold">
+              <Label htmlFor="estimatedBudget" className="font-semibold text-gray-700">
                 الميزانية المتوقعة (اختياري)
               </Label>
               <Input
@@ -176,21 +229,73 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
                 value={formData.estimatedBudget}
                 onChange={handleInputChange}
                 placeholder="مثال: 100-200 ريال"
-                className="h-12"
+                className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
                 disabled={isLoading}
               />
             </div>
 
-            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-              <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-              <p className="text-gray-600 mb-2">إرفاق ملفات (اختياري)</p>
-              <p className="text-sm text-gray-500">سيتم إضافة إمكانية رفع الملفات قريباً</p>
+            {/* File Upload Section */}
+            <div className="space-y-4">
+              <Label className="font-semibold text-gray-700">
+                رفع ملفات مرجعية (اختياري)
+              </Label>
+              
+              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center bg-gray-50 hover:bg-gray-100 transition-colors">
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                  accept="image/*,.pdf,.doc,.docx,.txt"
+                  disabled={isLoading}
+                />
+                <label htmlFor="file-upload" className="cursor-pointer">
+                  <Upload className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                  <p className="text-gray-600 mb-2 font-medium">اضغط لرفع الملفات</p>
+                  <p className="text-sm text-gray-500">
+                    يمكنك رفع صور، PDF، أو مستندات (الحد الأقصى: 10 ملفات)
+                  </p>
+                </label>
+              </div>
+
+              {/* Uploaded Files List */}
+              {files.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-sm font-medium text-gray-700">الملفات المرفوعة:</p>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          {getFileIcon(file.name)}
+                          <span className="text-sm font-medium text-gray-700 truncate max-w-[200px]">
+                            {file.name}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            {formatFileSize(file.size)}
+                          </span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="text-red-500 hover:text-red-700 hover:bg-red-50 p-1"
+                          disabled={isLoading}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="flex gap-3 pt-4">
               <Button
                 type="submit"
-                className="flex-1 h-12 bg-gradient-to-r from-red-500 to-purple-600 hover:from-red-600 hover:to-purple-700"
+                className="flex-1 h-12 bg-gradient-to-r from-red-500 to-purple-600 hover:from-red-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg"
                 disabled={isLoading}
               >
                 {isLoading ? 'جاري الإنشاء...' : 'إنشاء الطلب'}
@@ -199,7 +304,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
                 type="button"
                 variant="outline"
                 onClick={onClose}
-                className="px-8 h-12"
+                className="px-8 h-12 rounded-xl border-2 hover:bg-gray-50"
                 disabled={isLoading}
               >
                 إلغاء
