@@ -5,10 +5,12 @@ import { User } from '@/types/chat';
 import LoginForm from '@/components/LoginForm';
 import ClientDashboard from '@/components/ClientDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
+import Home from './Home';
 
 const Index = () => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -20,11 +22,18 @@ const Index = () => {
   const handleLogin = (userId: string) => {
     const user = chatService.getUserById(userId);
     setCurrentUser(user || null);
+    // Don't automatically show dashboard, show home page first
+    setShowDashboard(false);
   };
 
   const handleLogout = () => {
     localStorage.removeItem('current_user_id');
     setCurrentUser(null);
+    setShowDashboard(false);
+  };
+
+  const handleDashboardClick = () => {
+    setShowDashboard(true);
   };
 
   if (isLoading) {
@@ -46,11 +55,16 @@ const Index = () => {
     return <LoginForm onLogin={handleLogin} />;
   }
 
-  if (currentUser.role === 'admin') {
-    return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
+  // Show dashboard only when requested
+  if (showDashboard) {
+    if (currentUser.role === 'admin') {
+      return <AdminDashboard user={currentUser} onLogout={handleLogout} />;
+    }
+    return <ClientDashboard user={currentUser} onLogout={handleLogout} />;
   }
 
-  return <ClientDashboard user={currentUser} onLogout={handleLogout} />;
+  // Show home page with dashboard access
+  return <Home user={currentUser} onDashboardClick={handleDashboardClick} />;
 };
 
 export default Index;
