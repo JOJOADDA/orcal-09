@@ -55,7 +55,7 @@ class SupabaseService {
       console.error('Error fetching profile:', error);
       return null;
     }
-    return data;
+    return data as Profile;
   }
 
   async updateProfile(userId: string, updates: Partial<Profile>) {
@@ -66,7 +66,7 @@ class SupabaseService {
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as Profile, error };
   }
 
   // Order Management
@@ -87,6 +87,7 @@ class SupabaseService {
     if (data && !error) {
       // Create chat room for this order
       await this.createChatRoom(data.id, orderData.client_id);
+      return { data: data as DesignOrder, error };
     }
     
     return { data, error };
@@ -103,7 +104,7 @@ class SupabaseService {
       console.error('Error fetching orders:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as DesignOrder[];
   }
 
   async getAllOrders(): Promise<DesignOrder[]> {
@@ -116,7 +117,7 @@ class SupabaseService {
       console.error('Error fetching all orders:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as DesignOrder[];
   }
 
   async updateOrderStatus(orderId: string, status: DesignOrder['status']) {
@@ -130,6 +131,7 @@ class SupabaseService {
     if (data && !error) {
       // Send system message about status change
       await this.sendSystemMessage(orderId, `تم تحديث حالة الطلب إلى: ${this.getStatusText(status)}`);
+      return { data: data as DesignOrder, error };
     }
     
     return { data, error };
@@ -181,7 +183,7 @@ class SupabaseService {
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as OrderFile, error };
   }
 
   async getOrderFiles(orderId: string): Promise<OrderFile[]> {
@@ -195,7 +197,7 @@ class SupabaseService {
       console.error('Error fetching order files:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as OrderFile[];
   }
 
   // Chat Management
@@ -207,7 +209,7 @@ class SupabaseService {
       .eq('order_id', orderId)
       .single();
     
-    if (existingRoom) return { data: existingRoom, error: null };
+    if (existingRoom) return { data: existingRoom as ChatRoom, error: null };
 
     const { data, error } = await supabase
       .from('chat_rooms')
@@ -218,7 +220,7 @@ class SupabaseService {
       .select()
       .single();
     
-    return { data, error };
+    return { data: data as ChatRoom, error };
   }
 
   async getChatRoomByOrderId(orderId: string): Promise<ChatRoom | null> {
@@ -232,7 +234,7 @@ class SupabaseService {
       console.error('Error fetching chat room:', error);
       return null;
     }
-    return data;
+    return data as ChatRoom;
   }
 
   async getAllChatRooms(): Promise<ChatRoom[]> {
@@ -246,7 +248,7 @@ class SupabaseService {
       console.error('Error fetching chat rooms:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as ChatRoom[];
   }
 
   async sendMessage(messageData: {
@@ -273,6 +275,8 @@ class SupabaseService {
         .from('chat_rooms')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', messageData.room_id);
+      
+      return { data: data as ChatMessage, error };
     }
     
     return { data, error };
@@ -304,7 +308,7 @@ class SupabaseService {
       console.error('Error fetching messages:', error);
       return [];
     }
-    return data || [];
+    return (data || []) as ChatMessage[];
   }
 
   async markMessagesAsRead(roomId: string, userId: string) {
