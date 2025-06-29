@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,65 +16,50 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState({
-    phone: '',
+    email: '',
     password: ''
   });
   const [signupData, setSignupData] = useState({
     name: '',
     phone: '',
+    email: '',
     password: '',
     confirmPassword: ''
   });
   const { toast } = useToast();
 
-  const validatePhone = (phone: string) => {
-    const phoneRegex = /^\+249\d{9}$/;
-    return phoneRegex.test(phone);
-  };
+  const validatePhone = (phone: string) => /^09\d{8}$/.test(phone);
+  const validateEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-   if (!validatePhone(loginData.phone)) {
-  toast({
-    title: "خطأ في رقم الهاتف",
-    description: "رقم الهاتف يجب أن يبدأ بـ +249 ويتكون من 13 رقمًا",
-    variant: "destructive"
-  });
-  return;
-}
 
+    if (!validateEmail(loginData.email)) {
+      toast({
+        title: "خطأ في البريد الإلكتروني",
+        description: "يرجى إدخال بريد إلكتروني صحيح",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsLoading(true);
-
     try {
-      const { data, error } = await supabaseService.signIn(loginData.phone, loginData.password);
-      
-      if (error) {
-        let errorMessage = 'حدث خطأ أثناء تسجيل الدخول';
-        
-        if (error.message.includes('Invalid login credentials') || 
-            error.message.includes('invalid_credentials')) {
-          errorMessage = 'رقم الهاتف أو كلمة المرور غير صحيحة';
-        } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = 'لم يتم تأكيد البريد الإلكتروني';
-        }
-        
+      const { data, error } = await supabaseService.signIn(loginData.email, loginData.password);
+      if (error || !data.user) {
         toast({
           title: "خطأ في تسجيل الدخول",
-          description: errorMessage,
+          description: "البريد الإلكتروني أو كلمة المرور غير صحيحة",
           variant: "destructive"
         });
         return;
       }
 
-      if (data.user) {
-        toast({
-          title: "تم تسجيل الدخول بنجاح!",
-          description: "مرحباً بك في أوركال للدعاية والإعلان"
-        });
-        onAuthSuccess();
-      }
+      toast({
+        title: "تم تسجيل الدخول بنجاح!",
+        description: "مرحباً بك في أوركال للدعاية والإعلان"
+      });
+      onAuthSuccess();
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -90,89 +74,61 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate form data
+
     if (!signupData.name.trim()) {
-      toast({
-        title: "خطأ",
-        description: "يرجى إدخال الاسم الكامل",
-        variant: "destructive"
-      });
+      toast({ title: "خطأ", description: "يرجى إدخال الاسم الكامل", variant: "destructive" });
       return;
     }
 
     if (!validatePhone(signupData.phone)) {
-      toast({
-        title: "خطأ في رقم الهاتف",
-        description: "رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
-        variant: "destructive"
-      });
+      toast({ title: "خطأ في رقم الهاتف", description: "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام", variant: "destructive" });
+      return;
+    }
+
+    if (!validateEmail(signupData.email)) {
+      toast({ title: "خطأ", description: "يرجى إدخال بريد إلكتروني صحيح", variant: "destructive" });
       return;
     }
 
     if (signupData.password.length < 6) {
-      toast({
-        title: "خطأ في كلمة المرور",
-        description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
-        variant: "destructive"
-      });
+      toast({ title: "خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", variant: "destructive" });
       return;
     }
 
     if (signupData.password !== signupData.confirmPassword) {
-      toast({
-        title: "خطأ",
-        description: "كلمة المرور وتأكيد كلمة المرور غير متطابقتين",
-        variant: "destructive"
-      });
+      toast({ title: "خطأ", description: "كلمتا المرور غير متطابقتين", variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
-
     try {
       const { data, error } = await supabaseService.signUp(
-        signupData.phone,
+        signupData.email,
         signupData.password,
-        signupData.name
+        signupData.name,
+        signupData.phone
       );
-      
-      if (error) {
-        let errorMessage = 'حدث خطأ أثناء إنشاء الحساب';
-        
-        if (error.message.includes('User already registered') || 
-            error.message.includes('already been taken')) {
-          errorMessage = 'رقم الهاتف مسجل مسبقاً';
-        } else if (error.message.includes('weak password')) {
-          errorMessage = 'كلمة المرور ضعيفة، يرجى اختيار كلمة مرور أقوى';
-        }
-        
+
+      if (error || !data.user) {
         toast({
-          title: "خطأ في إنشاء الحساب",
-          description: errorMessage,
+          title: "فشل التسجيل",
+          description: error?.message || "حدث خطأ أثناء إنشاء الحساب",
           variant: "destructive"
         });
         return;
       }
 
-      if (data.user) {
-        toast({
-          title: "تم إنشاء الحساب بنجاح!",
-          description: "تم تسجيل الدخول تلقائياً. مرحباً بك في أوركال للدعاية والإعلان"
-        });
-        
-        // Wait a moment for the profile to be created
-        setTimeout(() => {
-          onAuthSuccess();
-        }, 1000);
-      }
+      toast({
+        title: "تم إنشاء الحساب بنجاح!",
+        description: "تم تسجيل الدخول تلقائياً. مرحباً بك في أوركال"
+      });
+
+      setTimeout(() => {
+        onAuthSuccess();
+      }, 1000);
     } catch (error) {
       console.error('Signup error:', error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء إنشاء الحساب",
-        variant: "destructive"
-      });
+      toast({ title: "خطأ", description: "حدث خطأ أثناء إنشاء الحساب", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -182,162 +138,91 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="text-center space-y-4">
-          <img 
-            src="/lovable-uploads/51ae0563-efba-46cb-86b3-70d5ebc74116.png" 
-            alt="أوركال" 
-            className="w-16 h-16 mx-auto object-contain"
-          />
-          <CardTitle className="text-2xl font-bold text-gray-900">
-            أوركال للدعاية والإعلان
-          </CardTitle>
+          <img src="/lovable-uploads/51ae0563-efba-46cb-86b3-70d5ebc74116.png" alt="أوركال" className="w-16 h-16 mx-auto object-contain" />
+          <CardTitle className="text-2xl font-bold text-gray-900">أوركال للدعاية والإعلان</CardTitle>
         </CardHeader>
-        
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
               <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-phone" className="flex items-center gap-2 font-semibold">
-                    <Phone className="w-4 h-4 text-red-500" />
-                    رقم الهاتف
-                  </Label>
+                  <Label htmlFor="login-email">البريد الإلكتروني</Label>
                   <Input
-                    id="login-phone"
-                    type="tel"
-                    value={loginData.phone}
-                    onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
-                    placeholder="09xxxxxxxx"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400 text-right"
+                    id="login-email"
+                    type="email"
+                    value={loginData.email}
+                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
+                    placeholder="example@email.com"
                     required
                     disabled={isLoading}
-                    dir="ltr"
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label htmlFor="login-password" className="flex items-center gap-2 font-semibold">
-                    <Lock className="w-4 h-4 text-red-500" />
-                    كلمة المرور
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="login-password"
-                      type={showPassword ? "text" : "password"}
-                      value={loginData.password}
-                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                      placeholder="أدخل كلمة المرور"
-                      className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400 pr-12"
-                      required
-                      disabled={isLoading}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={isLoading}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
+                  <Label htmlFor="login-password">كلمة المرور</Label>
+                  <Input
+                    id="login-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={loginData.password}
+                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                    required
+                    disabled={isLoading}
+                  />
                 </div>
-                
-                <Button
-                  type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-red-500 to-purple-600 hover:from-red-600 hover:to-purple-700 text-white font-semibold rounded-xl"
-                  disabled={isLoading}
-                >
+
+                <Button type="submit" disabled={isLoading} className="w-full">
                   {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="signup-name" className="flex items-center gap-2 font-semibold">
-                    <User className="w-4 h-4 text-red-500" />
-                    الاسم الكامل
-                  </Label>
-                  <Input
-                    id="signup-name"
-                    type="text"
-                    value={signupData.name}
-                    onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
-                    placeholder="أدخل اسمك الكامل"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-phone" className="flex items-center gap-2 font-semibold">
-                    <Phone className="w-4 h-4 text-red-500" />
-                    رقم الهاتف
-                  </Label>
-                  <Input
-                    id="signup-phone"
-                    type="tel"
-                    value={signupData.phone}
-                    onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
-                    placeholder="09xxxxxxxx"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400 text-right"
-                    required
-                    disabled={isLoading}
-                    dir="ltr"
-                  />
-                  <p className="text-sm text-gray-500 text-right">
-                    يجب أن يبدأ رقم الهاتف بـ 09 ويتكون من 10 أرقام
-                  </p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-password" className="flex items-center gap-2 font-semibold">
-                    <Lock className="w-4 h-4 text-red-500" />
-                    كلمة المرور
-                  </Label>
-                  <Input
-                    id="signup-password"
-                    type="password"
-                    value={signupData.password}
-                    onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
-                    placeholder="أدخل كلمة المرور (6 أحرف على الأقل)"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="signup-confirm" className="flex items-center gap-2 font-semibold">
-                    <Lock className="w-4 h-4 text-red-500" />
-                    تأكيد كلمة المرور
-                  </Label>
-                  <Input
-                    id="signup-confirm"
-                    type="password"
-                    value={signupData.confirmPassword}
-                    onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
-                    placeholder="أعد إدخال كلمة المرور"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                
-                <Button
-                  type="submit"
-                  className="w-full h-12 bg-gradient-to-r from-red-500 to-purple-600 hover:from-red-600 hover:to-purple-700 text-white font-semibold rounded-xl"
+                <Input
+                  placeholder="الاسم الكامل"
+                  value={signupData.name}
+                  onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
                   disabled={isLoading}
-                >
-                  {isLoading ? 'جاري إنشاء الحساب...' : 'إنشاء حساب جديد'}
+                  required
+                />
+                <Input
+                  placeholder="رقم الهاتف (09xxxxxxxx)"
+                  value={signupData.phone}
+                  onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
+                  disabled={isLoading}
+                  required
+                />
+                <Input
+                  placeholder="البريد الإلكتروني"
+                  type="email"
+                  value={signupData.email}
+                  onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
+                  disabled={isLoading}
+                  required
+                />
+                <Input
+                  placeholder="كلمة المرور"
+                  type="password"
+                  value={signupData.password}
+                  onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
+                  disabled={isLoading}
+                  required
+                />
+                <Input
+                  placeholder="تأكيد كلمة المرور"
+                  type="password"
+                  value={signupData.confirmPassword}
+                  onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
+                  disabled={isLoading}
+                  required
+                />
+                <Button type="submit" disabled={isLoading} className="w-full">
+                  {isLoading ? 'جاري التسجيل...' : 'إنشاء الحساب'}
                 </Button>
               </form>
             </TabsContent>
