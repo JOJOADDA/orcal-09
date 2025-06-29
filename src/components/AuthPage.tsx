@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Phone, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -15,20 +15,10 @@ interface AuthPageProps {
 const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [loginData, setLoginData] = useState({
-    email: '',
-    password: ''
-  });
-  const [signupData, setSignupData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
-  });
+  const [loginData, setLoginData] = useState({ email: '', password: '' });
+  const [signupData, setSignupData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
   const { toast } = useToast();
 
-  const validatePhone = (phone: string) => /^09\d{8}$/.test(phone);
   const validateEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -80,11 +70,6 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       return;
     }
 
-    if (!validatePhone(signupData.phone)) {
-      toast({ title: "خطأ في رقم الهاتف", description: "يجب أن يبدأ بـ 09 ويتكون من 10 أرقام", variant: "destructive" });
-      return;
-    }
-
     if (!validateEmail(signupData.email)) {
       toast({ title: "خطأ", description: "يرجى إدخال بريد إلكتروني صحيح", variant: "destructive" });
       return;
@@ -105,8 +90,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       const { data, error } = await supabaseService.signUp(
         signupData.email,
         signupData.password,
-        signupData.name,
-        signupData.phone
+        signupData.name
       );
 
       if (error || !data.user) {
@@ -123,9 +107,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         description: "تم تسجيل الدخول تلقائياً. مرحباً بك في أوركال"
       });
 
-      setTimeout(() => {
-        onAuthSuccess();
-      }, 1000);
+      setTimeout(() => onAuthSuccess(), 1000);
     } catch (error) {
       console.error('Signup error:', error);
       toast({ title: "خطأ", description: "حدث خطأ أثناء إنشاء الحساب", variant: "destructive" });
@@ -165,14 +147,27 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
                 <div className="space-y-2">
                   <Label htmlFor="login-password">كلمة المرور</Label>
-                  <Input
-                    id="login-password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={loginData.password}
-                    onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                    required
-                    disabled={isLoading}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      value={loginData.password}
+                      onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
+                      placeholder="********"
+                      required
+                      disabled={isLoading}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </Button>
+                  </div>
                 </div>
 
                 <Button type="submit" disabled={isLoading} className="w-full">
@@ -187,13 +182,6 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                   placeholder="الاسم الكامل"
                   value={signupData.name}
                   onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
-                  disabled={isLoading}
-                  required
-                />
-                <Input
-                  placeholder="رقم الهاتف (09xxxxxxxx)"
-                  value={signupData.phone}
-                  onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
                   disabled={isLoading}
                   required
                 />
