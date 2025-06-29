@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, Phone, LogIn, Mail, Lock } from 'lucide-react';
+import { User, LogIn, Mail, Lock } from 'lucide-react';
 import { chatService } from '@/services/chatService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -14,7 +14,6 @@ interface LoginFormProps {
 const LoginForm = ({ onLogin }: LoginFormProps) => {
   const [formData, setFormData] = useState({
     name: '',
-    phone: '',
     email: '',
     password: ''
   });
@@ -30,7 +29,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.email.trim() || !formData.password.trim()) {
+    if (!formData.name.trim() || !formData.email.trim() || !formData.password.trim()) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع الحقول",
@@ -41,7 +40,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
 
     setIsLoading(true);
     try {
-      const user = chatService.createUser(formData.name, formData.phone, formData.email, formData.password);
+      const user = chatService.createUser(formData.name, formData.email, formData.password);
       chatService.setCurrentUser(user.id);
       toast({
         title: "مرحباً بك!",
@@ -88,14 +87,6 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
                   الاسم الكامل
                 </Label>
                 <Input id="name" name="name" type="text" value={formData.name} onChange={handleInputChange} placeholder="أدخل اسمك الكامل" className="h-12 text-lg" disabled={isLoading} required />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="flex items-center gap-2 font-semibold">
-                  <Phone className="w-4 h-4 text-red-500" />
-                  رقم الهاتف
-                </Label>
-                <Input id="phone" name="phone" type="tel" value={formData.phone} onChange={handleInputChange} placeholder="09xxxxxxxx" className="h-12 text-lg" disabled={isLoading} required />
               </div>
 
               <div className="space-y-2">
