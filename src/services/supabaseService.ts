@@ -4,19 +4,15 @@ import { Profile, DesignOrder, OrderFile, ChatRoom, ChatMessage, MessageFile } f
 class SupabaseService {
   // Authentication
   async signUp(phone: string, password: string, name: string, role: 'client' | 'admin' = 'client') {
-    // Create a valid email format from phone number
-    const email = `user${phone.replace(/\D/g, '')}@orcal.app`;
-    
     const { data, error } = await supabase.auth.signUp({
-      email,
+      phone,
       password,
       options: {
         data: {
           name,
           phone,
           role
-        },
-        emailRedirectTo: undefined
+        }
       }
     });
 
@@ -33,11 +29,8 @@ class SupabaseService {
   }
 
   async signIn(phone: string, password: string) {
-    // Create the same email format used during signup
-    const email = `user${phone.replace(/\D/g, '')}@orcal.app`;
-    
     const { data, error } = await supabase.auth.signInWithPassword({
-      email,
+      phone,
       password
     });
     return { data, error };
@@ -115,7 +108,6 @@ class SupabaseService {
       .single();
     
     if (data && !error) {
-      // Create chat room for this order
       await this.createChatRoom(data.id, orderData.client_id);
       return { data: data as DesignOrder, error };
     }
@@ -159,7 +151,6 @@ class SupabaseService {
       .single();
     
     if (data && !error) {
-      // Send system message about status change
       await this.sendSystemMessage(orderId, `تم تحديث حالة الطلب إلى: ${this.getStatusText(status)}`);
       return { data: data as DesignOrder, error };
     }
@@ -232,7 +223,6 @@ class SupabaseService {
 
   // Chat Management
   async createChatRoom(orderId: string, clientId: string) {
-    // Check if room already exists
     const { data: existingRoom } = await supabase
       .from('chat_rooms')
       .select('*')
@@ -300,7 +290,6 @@ class SupabaseService {
       .single();
     
     if (data && !error) {
-      // Update chat room's updated_at
       await supabase
         .from('chat_rooms')
         .update({ updated_at: new Date().toISOString() })
@@ -349,7 +338,6 @@ class SupabaseService {
       .neq('sender_id', userId);
     
     if (!error) {
-      // Reset unread count
       await supabase
         .from('chat_rooms')
         .update({ unread_count: 0 })
