@@ -29,21 +29,22 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   const { toast } = useToast();
 
   const validatePhone = (phone: string) => {
-    const phoneRegex = /^09\d{8}$/;
+    const phoneRegex = /^\+249\d{9}$/;
     return phoneRegex.test(phone);
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validatePhone(loginData.phone)) {
-      toast({
-        title: "خطأ في رقم الهاتف",
-        description: "رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
-        variant: "destructive"
-      });
-      return;
-    }
+   if (!validatePhone(loginData.phone)) {
+  toast({
+    title: "خطأ في رقم الهاتف",
+    description: "رقم الهاتف يجب أن يبدأ بـ +249 ويتكون من 13 رقمًا",
+    variant: "destructive"
+  });
+  return;
+}
+
 
     setIsLoading(true);
 
