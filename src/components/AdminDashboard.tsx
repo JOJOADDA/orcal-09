@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,12 +16,12 @@ import {
   Filter,
   Settings
 } from 'lucide-react';
-import { chatService } from '@/services/chatService';
-import { DesignOrder, User, ChatRoom } from '@/types/chat';
+import { supabaseService } from '@/services/supabaseService';
+import { DesignOrder, Profile, ChatRoom } from '@/types/database';
 import ChatWindow from './ChatWindow';
 
 interface AdminDashboardProps {
-  user: User;
+  user: Profile;
   onLogout: () => void;
 }
 
@@ -32,6 +31,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState({
     totalOrders: 0,
     pendingOrders: 0,
@@ -44,19 +44,25 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const allOrders = chatService.getAllOrders();
-    const allChatRooms = chatService.getAllChatRooms();
-    const statistics = chatService.getStatistics();
+  const loadData = async () => {
+    setIsLoading(true);
+    const [allOrders, allChatRooms, statistics] = await Promise.all([
+      supabaseService.getAllOrders(),
+      supabaseService.getAllChatRooms(),
+      supabaseService.getStatistics()
+    ]);
     
     setOrders(allOrders);
     setChatRooms(allChatRooms);
     setStats(statistics);
+    setIsLoading(false);
   };
 
-  const handleStatusChange = (orderId: string, newStatus: DesignOrder['status']) => {
-    chatService.updateOrderStatus(orderId, newStatus);
-    loadData();
+  const handleStatusChange = async (orderId: string, newStatus: DesignOrder['status']) => {
+    const { error } = await supabaseService.updateOrderStatus(orderId, newStatus);
+    if (!error) {
+      loadData();
+    }
   };
 
   const getStatusIcon = (status: DesignOrder['status']) => {
@@ -100,8 +106,8 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   };
 
   const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.clientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         order.designType.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = order.client_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         order.design_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          order.description.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
@@ -213,7 +219,12 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {filteredOrders.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+                <p className="text-gray-500">جاري التحميل...</p>
+              </div>
+            ) : filteredOrders.length === 0 ? (
               <div className="text-center py-12">
                 <FileText className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-500 mb-2">لا توجد طلبات</h3>
@@ -229,7 +240,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h4 className="font-semibold text-gray-900">{order.designType}</h4>
+                          <h4 className="font-semibold text-gray-900">{order.design_type}</h4>
                           <Badge className={`${getStatusColor(order.status)} flex items-center gap-1`}>
                             {getStatusIcon(order.status)}
                             {getStatusText(order.status)}
@@ -237,9 +248,9 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
                         </div>
                         <p className="text-gray-600 text-sm mb-2">{order.description}</p>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span>العميل: {order.clientName}</span>
-                          <span>الهاتف: {order.clientPhone}</span>
-                          <span>التاريخ: {new Date(order.createdAt).toLocaleDateString('ar-EG')}</span>
+                          <span>العميل: {order.client_name}</span>
+                          <span>الهاتف: {order.client_phone}</span>
+                          <span>التاريخ: {new Date(order.created_at).toLocaleDateString('ar-EG')}</span>
                         </div>
                       </div>
                     </div>
@@ -280,6 +291,46 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
       </div>
     </div>
   );
+};
+
+const getStatusIcon = (status: DesignOrder['status']) => {
+  switch (status) {
+    case 'pending':
+      return <Clock className="w-4 h-4" />;
+    case 'in-progress':
+      return <AlertCircle className="w-4 h-4" />;
+    case 'completed':
+      return <CheckCircle className="w-4 h-4" />;
+    case 'delivered':
+      return <Truck className="w-4 h-4" />;
+    default:
+      return <Clock className="w-4 h-4" />;
+  }
+};
+
+const getStatusText = (status: DesignOrder['status']) => {
+  const statusMap = {
+    'pending': 'قيد الانتظار',
+    'in-progress': 'جاري التنفيذ',
+    'completed': 'مكتمل',
+    'delivered': 'تم التسليم'
+  };
+  return statusMap[status];
+};
+
+const getStatusColor = (status: DesignOrder['status']) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'in-progress':
+      return 'bg-blue-100 text-blue-800';
+    case 'completed':
+      return 'bg-green-100 text-green-800';
+    case 'delivered':
+      return 'bg-purple-100 text-purple-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
 };
 
 export default AdminDashboard;

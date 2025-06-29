@@ -3,13 +3,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, MessageSquare, Clock, CheckCircle, Truck, AlertCircle } from 'lucide-react';
-import { chatService } from '@/services/chatService';
-import { DesignOrder, User } from '@/types/chat';
+import { supabaseService } from '@/services/supabaseService';
+import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import ChatWindow from './ChatWindow';
 
 interface ClientDashboardProps {
-  user: User;
+  user: Profile;
   onLogout: () => void;
 }
 
@@ -17,14 +17,17 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   const [orders, setOrders] = useState<DesignOrder[]>([]);
   const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     loadOrders();
   }, [user.id]);
 
-  const loadOrders = () => {
-    const userOrders = chatService.getOrdersByClientId(user.id);
+  const loadOrders = async () => {
+    setIsLoading(true);
+    const userOrders = await supabaseService.getOrdersByClientId(user.id);
     setOrders(userOrders);
+    setIsLoading(false);
   };
 
   const handleOrderCreated = () => {
@@ -143,7 +146,12 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {orders.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500 mx-auto mb-4"></div>
+                <p className="text-gray-500">جاري التحميل...</p>
+              </div>
+            ) : orders.length === 0 ? (
               <div className="text-center py-12">
                 <MessageSquare className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                 <h3 className="text-lg font-semibold text-gray-500 mb-2">لا توجد طلبات بعد</h3>
@@ -166,7 +174,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900 mb-1">{order.designType}</h4>
+                        <h4 className="font-semibold text-gray-900 mb-1">{order.design_type}</h4>
                         <p className="text-gray-600 text-sm line-clamp-2">{order.description}</p>
                       </div>
                       <Badge className={`${getStatusColor(order.status)} flex items-center gap-1`}>
@@ -175,7 +183,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
                       </Badge>
                     </div>
                     <div className="flex justify-between items-center text-sm text-gray-500">
-                      <span>تاريخ الإنشاء: {new Date(order.createdAt).toLocaleDateString('ar-EG')}</span>
+                      <span>تاريخ الإنشاء: {new Date(order.created_at).toLocaleDateString('ar-EG')}</span>
                       <Button variant="ghost" size="sm">
                         <MessageSquare className="w-4 h-4 ml-1" />
                         فتح المحادثة
@@ -199,6 +207,46 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
       )}
     </div>
   );
+};
+
+const getStatusIcon = (status: DesignOrder['status']) => {
+  switch (status) {
+    case 'pending':
+      return <Clock className="w-4 h-4" />;
+    case 'in-progress':
+      return <AlertCircle className="w-4 h-4" />;
+    case 'completed':
+      return <CheckCircle className="w-4 h-4" />;
+    case 'delivered':
+      return <Truck className="w-4 h-4" />;
+    default:
+      return <Clock className="w-4 h-4" />;
+  }
+};
+
+const getStatusText = (status: DesignOrder['status']) => {
+  const statusMap = {
+    'pending': 'قيد الانتظار',
+    'in-progress': 'جاري التنفيذ',
+    'completed': 'مكتمل',
+    'delivered': 'تم التسليم'
+  };
+  return statusMap[status];
+};
+
+const getStatusColor = (status: DesignOrder['status']) => {
+  switch (status) {
+    case 'pending':
+      return 'bg-yellow-100 text-yellow-800';
+    case 'in-progress':
+      return 'bg-blue-100 text-blue-800';
+    case 'completed':
+      return 'bg-green-100 text-green-800';
+    case 'delivered':
+      return 'bg-purple-100 text-purple-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
 };
 
 export default ClientDashboard;

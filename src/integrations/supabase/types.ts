@@ -9,7 +9,291 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          is_read: boolean
+          message_type: string
+          order_id: string
+          room_id: string
+          sender_id: string
+          sender_name: string
+          sender_role: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message_type?: string
+          order_id: string
+          room_id: string
+          sender_id: string
+          sender_name: string
+          sender_role: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message_type?: string
+          order_id?: string
+          room_id?: string
+          sender_id?: string
+          sender_name?: string
+          sender_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "chat_rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_rooms: {
+        Row: {
+          admin_id: string | null
+          client_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          order_id: string
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          admin_id?: string | null
+          client_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_id: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          admin_id?: string | null
+          client_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          order_id?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_rooms_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      design_orders: {
+        Row: {
+          client_id: string
+          client_name: string
+          client_phone: string
+          created_at: string
+          description: string
+          design_type: string
+          estimated_delivery: string | null
+          id: string
+          priority: string
+          status: string
+          total_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          client_name: string
+          client_phone: string
+          created_at?: string
+          description: string
+          design_type: string
+          estimated_delivery?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          total_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          description?: string
+          design_type?: string
+          estimated_delivery?: string | null
+          id?: string
+          priority?: string
+          status?: string
+          total_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "design_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_files: {
+        Row: {
+          file_type: string
+          id: string
+          message_id: string
+          name: string
+          size_bytes: number
+          uploaded_at: string
+          url: string
+        }
+        Insert: {
+          file_type: string
+          id?: string
+          message_id: string
+          name: string
+          size_bytes: number
+          uploaded_at?: string
+          url: string
+        }
+        Update: {
+          file_type?: string
+          id?: string
+          message_id?: string
+          name?: string
+          size_bytes?: number
+          uploaded_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_files_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_files: {
+        Row: {
+          file_type: string
+          id: string
+          name: string
+          order_id: string
+          size_bytes: number
+          uploaded_at: string
+          uploaded_by: string
+          url: string
+        }
+        Insert: {
+          file_type: string
+          id?: string
+          name: string
+          order_id: string
+          size_bytes: number
+          uploaded_at?: string
+          uploaded_by: string
+          url: string
+        }
+        Update: {
+          file_type?: string
+          id?: string
+          name?: string
+          order_id?: string
+          size_bytes?: number
+          uploaded_at?: string
+          uploaded_by?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_files_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          name: string
+          phone: string
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

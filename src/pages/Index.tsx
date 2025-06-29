@@ -1,30 +1,62 @@
 
 import { useState, useEffect } from 'react';
-import { chatService } from '@/services/chatService';
-import { User } from '@/types/chat';
-import LoginForm from '@/components/LoginForm';
+import { supabaseService } from '@/services/supabaseService';
+import { Profile } from '@/types/database';
+import AuthPage from '@/components/AuthPage';
 import ClientDashboard from '@/components/ClientDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check if user is already logged in
-    const user = chatService.getCurrentUser();
-    setCurrentUser(user);
-    setIsLoading(false);
+    // Check authentication state
+    checkAuthState();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          const profile = await supabaseService.getProfile(session.user.id);
+          setCurrentUser(profile);
+          setIsAuthenticated(true);
+        } else {
+          setCurrentUser(null);
+          setIsAuthenticated(false);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = (userId: string) => {
-    const user = chatService.getUserById(userId);
-    setCurrentUser(user || null);
+  const checkAuthState = async () => {
+    const session = await supabaseService.getCurrentSession();
+    if (session?.user) {
+      const profile = await supabaseService.getProfile(session.user.id);
+      setCurrentUser(profile);
+      setIsAuthenticated(true);
+    }
+    setIsLoading(false);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('current_user_id');
+  const handleAuthSuccess = async () => {
+    const session = await supabaseService.getCurrentSession();
+    if (session?.user) {
+      const profile = await supabaseService.getProfile(session.user.id);
+      setCurrentUser(profile);
+      setIsAuthenticated(true);
+    }
+  };
+
+  const handleLogout = async () => {
+    await supabaseService.signOut();
     setCurrentUser(null);
+    setIsAuthenticated(false);
   };
 
   if (isLoading) {
@@ -36,14 +68,14 @@ const Index = () => {
             alt="أوركال" 
             className="w-16 h-16 mx-auto mb-4 object-contain animate-pulse"
           />
-          <p className="text-gray-600">جاري التحميل...</p>
+          <p className="text-gray-600 font-medium">جاري التحميل...</p>
         </div>
       </div>
     );
   }
 
-  if (!currentUser) {
-    return <LoginForm onLogin={handleLogin} />;
+  if (!isAuthenticated || !currentUser) {
+    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
   }
 
   if (currentUser.role === 'admin') {

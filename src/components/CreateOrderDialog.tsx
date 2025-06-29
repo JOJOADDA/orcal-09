@@ -6,22 +6,21 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Upload, FileText, Palette, File, Image, Trash2 } from 'lucide-react';
-import { chatService } from '@/services/chatService';
-import { User, OrderFile } from '@/types/chat';
+import { supabaseService } from '@/services/supabaseService';
+import { Profile } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
 interface CreateOrderDialogProps {
-  user: User;
+  user: Profile;
   onClose: () => void;
   onOrderCreated: () => void;
 }
 
 const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogProps) => {
   const [formData, setFormData] = useState({
-    designType: '',
+    design_type: '',
     description: '',
-    priority: 'medium' as 'low' | 'medium' | 'high',
-    estimatedBudget: ''
+    priority: 'medium' as 'low' | 'medium' | 'high'
   });
   const [files, setFiles] = useState<File[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,7 +77,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.designType || !formData.description.trim()) {
+    if (!formData.design_type || !formData.description.trim()) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع الحقول المطلوبة",
@@ -90,38 +89,49 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
     setIsLoading(true);
     
     try {
-      // Create order files from uploaded files
-      const orderFiles: OrderFile[] = files.map(file => ({
-        id: `file-${Date.now()}-${Math.random()}`,
-        name: file.name,
-        url: URL.createObjectURL(file), // In real app, upload to cloud storage
-        type: file.type.startsWith('image/') ? 'image' : 'document',
-        size: file.size,
-        uploadedAt: new Date()
-      }));
-
-      const order = chatService.createOrder({
-        clientId: user.id,
-        clientName: user.name,
-        clientPhone: user.phone,
-        designType: formData.designType,
+      // Create the order
+      const { data: order, error: orderError } = await supabaseService.createOrder({
+        client_id: user.id,
+        client_name: user.name,
+        client_phone: user.phone,
+        design_type: formData.design_type,
         description: formData.description,
         priority: formData.priority
       });
 
-      // Add files to order
-      orderFiles.forEach(file => {
-        chatService.addFileToOrder(order.id, file);
-      });
+      if (orderError || !order) {
+        throw new Error(orderError?.message || 'Failed to create order');
+      }
 
-      // Send file message if files were uploaded
-      if (orderFiles.length > 0) {
-        chatService.sendMessage(
-          order.id, 
-          user.id, 
-          `تم رفع ${orderFiles.length} ملف(ات) مرفقة مع الطلب`,
-          orderFiles
-        );
+      // Upload files if any
+      if (files.length > 0) {
+        for (const file of files) {
+          const fileUrl = await supabaseService.uploadFile(file, 'order-files', user.id);
+          if (fileUrl) {
+            await supabaseService.addOrderFile({
+              order_id: order.id,
+              name: file.name,
+              url: fileUrl,
+              file_type: file.type.startsWith('image/') ? 'image' : 'document',
+              size_bytes: file.size,
+              uploaded_by: user.id
+            });
+          }
+        }
+
+        // Send file message
+        const room = await supabaseService.getChatRoomByOrderId(order.id);
+        if (room) {
+          await supabaseService.sendMessage({
+            room_id: room.id,
+            order_id: order.id,
+            sender_id: user.id,
+            sender_name: user.name,
+            sender_role: 'client',
+            content: `تم رفع ${files.length} ملف(ات) مرفقة مع الطلب`,
+            message_type: 'file'
+          });
+        }
       }
 
       toast({
@@ -131,6 +141,7 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
 
       onOrderCreated();
     } catch (error) {
+      console.error('Error creating order:', error);
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء إنشاء الطلب، يرجى المحاولة مرة أخرى",
@@ -163,14 +174,14 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="designType" className="flex items-center gap-2 font-semibold text-gray-700">
+                <Label htmlFor="design_type" className="flex items-center gap-2 font-semibold text-gray-700">
                   <Palette className="w-4 h-4 text-red-500" />
                   نوع التصميم المطلوب *
                 </Label>
                 <select
-                  id="designType"
-                  name="designType"
-                  value={formData.designType}
+                  id="design_type"
+                  name="design_type"
+                  value={formData.design_type}
                   onChange={handleInputChange}
                   className="w-full h-12 px-4 rounded-xl border-2 border-gray-200 bg-white focus:outline-none focus:border-red-400 transition-colors"
                   required
@@ -214,22 +225,6 @@ const CreateOrderDialog = ({ user, onClose, onOrderCreated }: CreateOrderDialogP
                 placeholder="اكتب هنا تفاصيل التصميم بدقة: الألوان المفضلة، النص المطلوب، الأسلوب، أي ملاحظات خاصة..."
                 className="min-h-[120px] resize-none border-2 border-gray-200 focus:border-red-400 rounded-xl"
                 required
-                disabled={isLoading}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="estimatedBudget" className="font-semibold text-gray-700">
-                الميزانية المتوقعة (اختياري)
-              </Label>
-              <Input
-                id="estimatedBudget"
-                name="estimatedBudget"
-                type="text"
-                value={formData.estimatedBudget}
-                onChange={handleInputChange}
-                placeholder="مثال: 100-200 ريال"
-                className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
                 disabled={isLoading}
               />
             </div>

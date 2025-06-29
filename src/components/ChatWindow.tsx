@@ -1,15 +1,14 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Send, MessageSquare, Paperclip, Download, Eye, Image, File } from 'lucide-react';
-import { chatService } from '@/services/chatService';
-import { User, ChatMessage, DesignOrder } from '@/types/chat';
+import { supabaseService } from '@/services/supabaseService';
+import { Profile, ChatMessage, DesignOrder } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 
 interface ChatWindowProps {
-  user: User;
+  user: Profile;
   order: DesignOrder;
   onClose: () => void;
 }
@@ -18,25 +17,40 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
     loadMessages();
-    const interval = setInterval(loadMessages, 2000); // Poll for new messages
-    return () => clearInterval(interval);
+    
+    // Subscribe to real-time messages
+    const subscription = supabaseService.subscribeToMessages(order.id, (newMessage) => {
+      setMessages(prev => [...prev, newMessage]);
+    });
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, [order.id]);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const loadMessages = () => {
-    const orderMessages = chatService.getMessagesByOrderId(order.id);
+  const loadMessages = async () => {
+    setIsLoadingMessages(true);
+    const orderMessages = await supabaseService.getMessagesByOrderId(order.id);
     setMessages(orderMessages);
     
     // Mark messages as read
-    chatService.markMessagesAsRead(order.id, user.id);
+    const room = await supabaseService.getChatRoomByOrderId(order.id);
+    if (room) {
+      await supabaseService.markMessagesAsRead(room.id, user.id);
+    }
+    setIsLoadingMessages(false);
   };
 
   const scrollToBottom = () => {
@@ -51,10 +65,28 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
     setIsLoading(true);
     
     try {
-      chatService.sendMessage(order.id, user.id, newMessage);
+      const room = await supabaseService.getChatRoomByOrderId(order.id);
+      if (!room) {
+        throw new Error('Chat room not found');
+      }
+
+      const { error } = await supabaseService.sendMessage({
+        room_id: room.id,
+        order_id: order.id,
+        sender_id: user.id,
+        sender_name: user.name,
+        sender_role: user.role,
+        content: newMessage
+      });
+
+      if (error) {
+        throw error;
+      }
+
       setNewMessage('');
-      loadMessages();
+      // Message will be added via real-time subscription
     } catch (error) {
+      console.error('Error sending message:', error);
       toast({
         title: "خطأ",
         description: "فشل في إرسال الرسالة",
@@ -109,14 +141,14 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
             <MessageSquare className="w-6 h-6 text-blue-500" />
             <div>
               <CardTitle className="text-lg text-gray-900">
-                دردشة الطلب: {order.designType}
+                دردشة الطلب: {order.design_type}
               </CardTitle>
               <div className="flex items-center gap-2 mt-1">
                 <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
                   {getStatusText(order.status)}
                 </span>
                 <span className="text-sm text-gray-500">
-                  {new Date(order.createdAt).toLocaleDateString('ar')}
+                  {new Date(order.created_at).toLocaleDateString('ar')}
                 </span>
               </div>
             </div>
@@ -134,83 +166,45 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
         <CardContent className="flex-1 flex flex-col p-0">
           {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.senderId === user.id ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-[70%] rounded-2xl p-3 ${
-                    message.senderId === user.id
-                      ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
-                      : message.type === 'system'
-                      ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
-                      : 'bg-white text-gray-900 shadow-md border'
-                  }`}
-                >
-                  {message.type !== 'system' && (
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-xs font-medium opacity-75">
-                        {message.senderName}
-                      </span>
-                      <span className="text-xs opacity-60">
-                        {new Date(message.timestamp).toLocaleTimeString('ar', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                    </div>
-                  )}
-                  
-                  <p className="text-sm leading-relaxed">{message.content}</p>
-                  
-                  {/* File Attachments */}
-                  {message.files && message.files.length > 0 && (
-                    <div className="mt-3 space-y-2">
-                      {message.files.map((file) => (
-                        <div
-                          key={file.id}
-                          className={`flex items-center gap-2 p-2 rounded-lg ${
-                            message.senderId === user.id ? 'bg-white/20' : 'bg-gray-100'
-                          }`}
-                        >
-                          {getFileIcon(file.name)}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-xs font-medium truncate">{file.name}</p>
-                            <p className="text-xs opacity-75">{formatFileSize(file.size)}</p>
-                          </div>
-                          <div className="flex gap-1">
-                            {file.type === 'image' && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={() => window.open(file.url, '_blank')}
-                              >
-                                <Eye className="w-3 h-3" />
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => {
-                                const link = document.createElement('a');
-                                link.href = file.url;
-                                link.download = file.name;
-                                link.click();
-                              }}
-                            >
-                              <Download className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            {isLoadingMessages ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+                <p className="text-gray-500">جاري تحميل الرسائل...</p>
               </div>
-            ))}
+            ) : (
+              messages.map((message) => (
+                <div
+                  key={message.id}
+                  className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
+                >
+                  <div
+                    className={`max-w-[70%] rounded-2xl p-3 ${
+                      message.sender_id === user.id
+                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
+                        : message.sender_role === 'system'
+                        ? 'bg-yellow-100 text-yellow-800 border border-yellow-200'
+                        : 'bg-white text-gray-900 shadow-md border'
+                    }`}
+                  >
+                    {message.sender_role !== 'system' && (
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-medium opacity-75">
+                          {message.sender_name}
+                        </span>
+                        <span className="text-xs opacity-60">
+                          {new Date(message.created_at).toLocaleTimeString('ar', {
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </span>
+                      </div>
+                    )}
+                    
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  </div>
+                </div>
+              ))
+            )}
             <div ref={messagesEndRef} />
           </div>
 
@@ -249,6 +243,42 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
       </Card>
     </div>
   );
+};
+
+const getStatusColor = (status: DesignOrder['status']) => {
+  const colors = {
+    'pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+    'in-progress': 'bg-blue-100 text-blue-800 border-blue-200',
+    'completed': 'bg-green-100 text-green-800 border-green-200',
+    'delivered': 'bg-purple-100 text-purple-800 border-purple-200'
+  };
+  return colors[status];
+};
+
+const getStatusText = (status: DesignOrder['status']) => {
+  const statusMap = {
+    'pending': 'قيد الانتظار',
+    'in-progress': 'جاري التنفيذ',
+    'completed': 'مكتمل',
+    'delivered': 'تم التسليم'
+  };
+  return statusMap[status];
+};
+
+const formatFileSize = (bytes: number) => {
+  if (bytes === 0) return '0 Bytes';
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const getFileIcon = (fileName: string) => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
+    return <Image className="w-4 h-4 text-blue-500" />;
+  }
+  return <File className="w-4 h-4 text-gray-500" />;
 };
 
 export default ChatWindow;
