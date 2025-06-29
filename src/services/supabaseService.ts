@@ -28,13 +28,14 @@ class SupabaseService {
     return { data, error };
   }
 
-  async signIn(phone: string, password: string) {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      phone,
-      password
-    });
-    return { data, error };
-  }
+async signIn(phone: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    phone,
+    password
+  });
+
+  return { data, error };
+}
 
   async signOut() {
     const { error } = await supabase.auth.signOut();
