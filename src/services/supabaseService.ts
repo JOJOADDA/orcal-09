@@ -3,7 +3,10 @@ import { Profile, DesignOrder, OrderFile, ChatRoom, ChatMessage, MessageFile } f
 
 class SupabaseService {
   // Authentication
-  async signUp(email: string, password: string, name: string, phone: string, role: 'client' | 'admin' = 'client') {
+  async signUp(phone: string, password: string, name: string, role: 'client' | 'admin' = 'client') {
+    // Create a valid email format from phone number
+    const email = `user${phone.replace(/\D/g, '')}@orcal.app`;
+    
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -13,14 +16,26 @@ class SupabaseService {
           phone,
           role
         },
-        // Disable email confirmation for easier registration
         emailRedirectTo: undefined
       }
     });
+
+    // If signup is successful, create profile immediately
+    if (data.user && !error) {
+      try {
+        await this.createProfile(data.user.id, name, phone, role);
+      } catch (profileError) {
+        console.error('Error creating profile:', profileError);
+      }
+    }
+
     return { data, error };
   }
 
-  async signIn(email: string, password: string) {
+  async signIn(phone: string, password: string) {
+    // Create the same email format used during signup
+    const email = `user${phone.replace(/\D/g, '')}@orcal.app`;
+    
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -44,6 +59,21 @@ class SupabaseService {
   }
 
   // Profile Management
+  async createProfile(userId: string, name: string, phone: string, role: 'client' | 'admin' = 'client') {
+    const { data, error } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        name,
+        phone,
+        role
+      })
+      .select()
+      .single();
+    
+    return { data: data as Profile, error };
+  }
+
   async getProfile(userId: string): Promise<Profile | null> {
     const { data, error } = await supabase
       .from('profiles')

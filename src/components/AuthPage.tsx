@@ -28,21 +28,41 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   });
   const { toast } = useToast();
 
+  const validatePhone = (phone: string) => {
+    const phoneRegex = /^09\d{8}$/;
+    return phoneRegex.test(phone);
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validatePhone(loginData.phone)) {
+      toast({
+        title: "خطأ في رقم الهاتف",
+        description: "رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      // Create a temporary email from phone number for Supabase
-      const email = `${loginData.phone}@phone.local`;
-      const { data, error } = await supabaseService.signIn(email, loginData.password);
+      const { data, error } = await supabaseService.signIn(loginData.phone, loginData.password);
       
       if (error) {
+        let errorMessage = 'حدث خطأ أثناء تسجيل الدخول';
+        
+        if (error.message.includes('Invalid login credentials') || 
+            error.message.includes('invalid_credentials')) {
+          errorMessage = 'رقم الهاتف أو كلمة المرور غير صحيحة';
+        } else if (error.message.includes('Email not confirmed')) {
+          errorMessage = 'لم يتم تأكيد البريد الإلكتروني';
+        }
+        
         toast({
           title: "خطأ في تسجيل الدخول",
-          description: error.message === 'Invalid login credentials' 
-            ? 'رقم الهاتف أو كلمة المرور غير صحيحة'
-            : 'حدث خطأ أثناء تسجيل الدخول',
+          description: errorMessage,
           variant: "destructive"
         });
         return;
@@ -56,6 +76,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         onAuthSuccess();
       }
     } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء تسجيل الدخول",
@@ -69,6 +90,34 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    // Validate form data
+    if (!signupData.name.trim()) {
+      toast({
+        title: "خطأ",
+        description: "يرجى إدخال الاسم الكامل",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (!validatePhone(signupData.phone)) {
+      toast({
+        title: "خطأ في رقم الهاتف",
+        description: "رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (signupData.password.length < 6) {
+      toast({
+        title: "خطأ في كلمة المرور",
+        description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
+        variant: "destructive"
+      });
+      return;
+    }
+
     if (signupData.password !== signupData.confirmPassword) {
       toast({
         title: "خطأ",
@@ -78,44 +127,28 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       return;
     }
 
-    if (signupData.password.length < 6) {
-      toast({
-        title: "خطأ",
-        description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    // Validate phone number format
-    const phoneRegex = /^09\d{8}$/;
-    if (!phoneRegex.test(signupData.phone)) {
-      toast({
-        title: "خطأ",
-        description: "رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      // Create a temporary email from phone number for Supabase
-      const email = `${signupData.phone}@phone.local`;
       const { data, error } = await supabaseService.signUp(
-        email,
+        signupData.phone,
         signupData.password,
-        signupData.name,
-        signupData.phone
+        signupData.name
       );
       
       if (error) {
+        let errorMessage = 'حدث خطأ أثناء إنشاء الحساب';
+        
+        if (error.message.includes('User already registered') || 
+            error.message.includes('already been taken')) {
+          errorMessage = 'رقم الهاتف مسجل مسبقاً';
+        } else if (error.message.includes('weak password')) {
+          errorMessage = 'كلمة المرور ضعيفة، يرجى اختيار كلمة مرور أقوى';
+        }
+        
         toast({
           title: "خطأ في إنشاء الحساب",
-          description: error.message === 'User already registered'
-            ? 'رقم الهاتف مسجل مسبقاً'
-            : 'حدث خطأ أثناء إنشاء الحساب',
+          description: errorMessage,
           variant: "destructive"
         });
         return;
@@ -124,16 +157,16 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       if (data.user) {
         toast({
           title: "تم إنشاء الحساب بنجاح!",
-          description: "يمكنك الآن تسجيل الدخول والبدء في استخدام الخدمة"
+          description: "تم تسجيل الدخول تلقائياً. مرحباً بك في أوركال للدعاية والإعلان"
         });
         
-        // Auto login after signup
-        const { error: loginError } = await supabaseService.signIn(email, signupData.password);
-        if (!loginError) {
+        // Wait a moment for the profile to be created
+        setTimeout(() => {
           onAuthSuccess();
-        }
+        }, 1000);
       }
     } catch (error) {
+      console.error('Signup error:', error);
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء إنشاء الحساب",
@@ -149,7 +182,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="text-center space-y-4">
           <img 
-            src="/lovable-uploads/65aa4b7b-e60a-4160-bf45-4c057f62c70a.png" 
+            src="/lovable-uploads/51ae0563-efba-46cb-86b3-70d5ebc74116.png" 
             alt="أوركال" 
             className="w-16 h-16 mx-auto object-contain"
           />
