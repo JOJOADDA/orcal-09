@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, DesignOrder, OrderFile, ChatRoom, ChatMessage, MessageFile } from '@/types/database';
 
@@ -14,7 +13,8 @@ class SupabaseService {
           phone,
           role
         },
-        emailRedirectTo: `${window.location.origin}/`
+        // Disable email confirmation for easier registration
+        emailRedirectTo: undefined
       }
     });
     return { data, error };

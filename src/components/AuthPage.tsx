@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Phone, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Phone, Lock, Eye, EyeOff } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,12 +17,11 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState({
-    email: '',
+    phone: '',
     password: ''
   });
   const [signupData, setSignupData] = useState({
     name: '',
-    email: '',
     phone: '',
     password: '',
     confirmPassword: ''
@@ -34,14 +33,16 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     setIsLoading(true);
 
     try {
-      const { data, error } = await supabaseService.signIn(loginData.email, loginData.password);
+      // Create a temporary email from phone number for Supabase
+      const email = `${loginData.phone}@phone.local`;
+      const { data, error } = await supabaseService.signIn(email, loginData.password);
       
       if (error) {
         toast({
           title: "خطأ في تسجيل الدخول",
           description: error.message === 'Invalid login credentials' 
-            ? 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
-            : error.message,
+            ? 'رقم الهاتف أو كلمة المرور غير صحيحة'
+            : 'حدث خطأ أثناء تسجيل الدخول',
           variant: "destructive"
         });
         return;
@@ -86,11 +87,24 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       return;
     }
 
+    // Validate phone number format
+    const phoneRegex = /^09\d{8}$/;
+    if (!phoneRegex.test(signupData.phone)) {
+      toast({
+        title: "خطأ",
+        description: "رقم الهاتف يجب أن يبدأ بـ 09 ويتكون من 10 أرقام",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
+      // Create a temporary email from phone number for Supabase
+      const email = `${signupData.phone}@phone.local`;
       const { data, error } = await supabaseService.signUp(
-        signupData.email,
+        email,
         signupData.password,
         signupData.name,
         signupData.phone
@@ -100,8 +114,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         toast({
           title: "خطأ في إنشاء الحساب",
           description: error.message === 'User already registered'
-            ? 'هذا البريد الإلكتروني مسجل مسبقاً'
-            : error.message,
+            ? 'رقم الهاتف مسجل مسبقاً'
+            : 'حدث خطأ أثناء إنشاء الحساب',
           variant: "destructive"
         });
         return;
@@ -114,7 +128,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         });
         
         // Auto login after signup
-        const { error: loginError } = await supabaseService.signIn(signupData.email, signupData.password);
+        const { error: loginError } = await supabaseService.signIn(email, signupData.password);
         if (!loginError) {
           onAuthSuccess();
         }
@@ -154,19 +168,20 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
             <TabsContent value="login">
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-email" className="flex items-center gap-2 font-semibold">
-                    <Mail className="w-4 h-4 text-red-500" />
-                    البريد الإلكتروني
+                  <Label htmlFor="login-phone" className="flex items-center gap-2 font-semibold">
+                    <Phone className="w-4 h-4 text-red-500" />
+                    رقم الهاتف
                   </Label>
                   <Input
-                    id="login-email"
-                    type="email"
-                    value={loginData.email}
-                    onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    placeholder="أدخل بريدك الإلكتروني"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
+                    id="login-phone"
+                    type="tel"
+                    value={loginData.phone}
+                    onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
+                    placeholder="09xxxxxxxx"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400 text-right"
                     required
                     disabled={isLoading}
+                    dir="ltr"
                   />
                 </div>
                 
@@ -229,23 +244,6 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="signup-email" className="flex items-center gap-2 font-semibold">
-                    <Mail className="w-4 h-4 text-red-500" />
-                    البريد الإلكتروني
-                  </Label>
-                  <Input
-                    id="signup-email"
-                    type="email"
-                    value={signupData.email}
-                    onChange={(e) => setSignupData({ ...signupData, email: e.target.value })}
-                    placeholder="أدخل بريدك الإلكتروني"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
-                    required
-                    disabled={isLoading}
-                  />
-                </div>
-                
-                <div className="space-y-2">
                   <Label htmlFor="signup-phone" className="flex items-center gap-2 font-semibold">
                     <Phone className="w-4 h-4 text-red-500" />
                     رقم الهاتف
@@ -256,10 +254,14 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     value={signupData.phone}
                     onChange={(e) => setSignupData({ ...signupData, phone: e.target.value })}
                     placeholder="09xxxxxxxx"
-                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400"
+                    className="h-12 rounded-xl border-2 border-gray-200 focus:border-red-400 text-right"
                     required
                     disabled={isLoading}
+                    dir="ltr"
                   />
+                  <p className="text-sm text-gray-500 text-right">
+                    يجب أن يبدأ رقم الهاتف بـ 09 ويتكون من 10 أرقام
+                  </p>
                 </div>
                 
                 <div className="space-y-2">
