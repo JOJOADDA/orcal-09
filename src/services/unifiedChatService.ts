@@ -24,18 +24,57 @@ export class UnifiedChatService {
     return uuidRegex.test(uuid);
   }
 
-  // إنشاء أو جلب غرفة الدردشة مع دعم محسن للمصممين
+  // إنشاء ملف تعريف مصمم موثوق
+  private async ensureDesignerProfile(designerName: string, designerId: string): Promise<boolean> {
+    try {
+      console.log('Ensuring designer profile exists:', { name: designerName, id: designerId });
+      
+      // محاولة جلب الملف الموجود
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', designerId)
+        .maybeSingle();
+
+      if (existingProfile && !fetchError) {
+        console.log('Designer profile already exists');
+        return true;
+      }
+
+      // إنشاء ملف تعريف جديد
+      const { error: insertError } = await supabase
+        .from('profiles')
+        .insert({
+          id: designerId,
+          name: designerName,
+          phone: '+249123456789',
+          role: 'admin' // استخدام admin في قاعدة البيانات
+        });
+
+      if (insertError) {
+        console.error('Error creating designer profile:', insertError);
+        return false;
+      }
+
+      console.log('Designer profile created successfully');
+      return true;
+    } catch (error) {
+      console.error('Error ensuring designer profile:', error);
+      return false;
+    }
+  }
+
+  // إنشاء أو جلب غرفة الدردشة
   async getOrCreateChatRoom(orderId: string, userId: string, userRole: string = 'client'): Promise<ChatRoom | null> {
     try {
       console.log('Getting/Creating chat room for order:', orderId, 'User:', userId, 'Role:', userRole);
       
-      // التحقق من صحة معرف الطلب
       if (!this.isValidUUID(orderId)) {
         console.error('Invalid order ID format:', orderId);
         return null;
       }
 
-      // محاولة جلب الغرفة الموجودة أولاً
+      // محاولة جلب الغرفة الموجودة
       const { data: existingRoom, error: fetchError } = await supabase
         .from('chat_rooms')
         .select('*')
@@ -44,6 +83,19 @@ export class UnifiedChatService {
 
       if (existingRoom && !fetchError) {
         console.log('Found existing chat room:', existingRoom.id);
+        
+        // تحديث admin_id إذا كان المستخدم مصمم ولم يكن محدد
+        if (userRole === 'designer' && !existingRoom.admin_id) {
+          const { error: updateError } = await supabase
+            .from('chat_rooms')
+            .update({ admin_id: userId })
+            .eq('id', existingRoom.id);
+          
+          if (!updateError) {
+            existingRoom.admin_id = userId;
+          }
+        }
+        
         return existingRoom as ChatRoom;
       }
 
@@ -63,6 +115,7 @@ export class UnifiedChatService {
       const roomData: any = {
         order_id: orderId,
         client_id: orderData.client_id,
+        admin_id: userRole === 'designer' ? userId : null,
         unread_count: 0,
         is_active: true
       };
@@ -123,7 +176,7 @@ export class UnifiedChatService {
     }
   }
 
-  // إرسال رسالة مع دعم محسن للمصممين
+  // إرسال رسالة مع معالجة محسنة للمصممين
   async sendMessage(messageData: {
     order_id: string;
     sender_id: string;
@@ -134,17 +187,31 @@ export class UnifiedChatService {
     files?: OrderFile[];
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
     try {
-      console.log('Sending message from:', messageData.sender_name, 'Role:', messageData.sender_role);
-      console.log('Message content:', messageData.content.substring(0, 100) + '...');
-      console.log('Sender ID:', messageData.sender_id);
+      console.log('=== SENDING MESSAGE ===');
+      console.log('Sender:', messageData.sender_name, 'Role:', messageData.sender_role, 'ID:', messageData.sender_id);
+      console.log('Order ID:', messageData.order_id);
+      console.log('Content:', messageData.content.substring(0, 100) + '...');
       
-      // التحقق من صحة معرف الطلب
       if (!this.isValidUUID(messageData.order_id)) {
         console.error('Invalid order ID format:', messageData.order_id);
         return { success: false, error: { message: 'Invalid order ID format' } };
       }
 
-      // التأكد من وجود غرفة الدردشة وإنشاؤها إذا لم تكن موجودة
+      if (!this.isValidUUID(messageData.sender_id)) {
+        console.error('Invalid sender ID format:', messageData.sender_id);
+        return { success: false, error: { message: 'Invalid sender ID format' } };
+      }
+
+      // للمصممين: التأكد من وجود ملف التعريف
+      if (messageData.sender_role === 'designer') {
+        const profileExists = await this.ensureDesignerProfile(messageData.sender_name, messageData.sender_id);
+        if (!profileExists) {
+          console.error('Failed to ensure designer profile');
+          return { success: false, error: { message: 'Failed to create designer profile' } };
+        }
+      }
+
+      // التأكد من وجود غرفة الدردشة
       const room = await this.getOrCreateChatRoom(
         messageData.order_id, 
         messageData.sender_id, 
@@ -156,27 +223,11 @@ export class UnifiedChatService {
         return { success: false, error: { message: 'Failed to get or create chat room' } };
       }
 
-      console.log('Using chat room:', room.id, 'for sending message');
+      console.log('Using chat room:', room.id);
 
-      // إنشاء ملف تعريف مؤقت في حالة عدم وجوده (للمصممين)
-      if (messageData.sender_role === 'designer' || messageData.sender_role === 'admin') {
-        try {
-          const { error: profileError } = await supabase
-            .from('profiles')
-            .upsert({
-              id: messageData.sender_id,
-              name: messageData.sender_name,
-              role: messageData.sender_role === 'designer' ? 'admin' : messageData.sender_role,
-              phone: '+249123456789', // رقم افتراضي
-            }, { onConflict: 'id' });
-          
-          if (profileError) {
-            console.warn('Could not create/update profile:', profileError);
-          }
-        } catch (error) {
-          console.warn('Profile creation failed, continuing:', error);
-        }
-      }
+      // تحويل دور المصمم إلى admin لقاعدة البيانات
+      const dbSenderRole = messageData.sender_role === 'designer' ? 'admin' : messageData.sender_role;
+      console.log('Database sender role:', dbSenderRole);
 
       // إرسال الرسالة
       const { data, error } = await supabase
@@ -186,7 +237,7 @@ export class UnifiedChatService {
           order_id: messageData.order_id,
           sender_id: messageData.sender_id,
           sender_name: messageData.sender_name,
-          sender_role: messageData.sender_role,
+          sender_role: dbSenderRole,
           content: messageData.content,
           message_type: messageData.message_type || 'text',
           is_read: false
@@ -195,11 +246,11 @@ export class UnifiedChatService {
         .single();
 
       if (error) {
-        console.error('Error sending message to database:', error);
+        console.error('Database error sending message:', error);
         return { success: false, error };
       }
 
-      console.log('Message sent successfully to database with ID:', data.id);
+      console.log('Message sent successfully with ID:', data.id);
 
       // رفع الملفات إذا كانت موجودة
       if (messageData.files && messageData.files.length > 0) {
@@ -217,10 +268,10 @@ export class UnifiedChatService {
         })
         .eq('id', room.id);
 
-      console.log('Chat room updated, message sending completed successfully');
+      console.log('=== MESSAGE SENT SUCCESSFULLY ===');
       return { success: true, message: data as ChatMessage };
     } catch (error) {
-      console.error('Error in sendMessage:', error);
+      console.error('Unexpected error in sendMessage:', error);
       return { success: false, error: this.handleError(error, 'Send Message') };
     }
   }

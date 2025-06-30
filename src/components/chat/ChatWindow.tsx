@@ -24,11 +24,9 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   useEffect(() => {
     loadMessages();
     
-    // الاشتراك في الرسائل الفورية
     const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (newMessage) => {
       console.log('New message received in chat window:', newMessage);
       setMessages(prev => {
-        // تجنب الرسائل المكررة
         const exists = prev.find(msg => msg.id === newMessage.id);
         if (exists) return prev;
         return [...prev, newMessage];
@@ -53,7 +51,6 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
       console.log('Loaded messages for order:', order.id, 'Count:', orderMessages.length);
       setMessages(orderMessages);
       
-      // تحديد الرسائل كمقروءة
       await unifiedChatService.markMessagesAsRead(order.id, user.id);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -79,24 +76,16 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
     setIsLoading(true);
     
     try {
-      console.log('Sending message from user:', user.name, 'Role:', user.role, 'ID:', user.id);
-      console.log('Message content:', newMessage);
-      
-      // التأكد من أن دور المرسل صحيح - تحويل designer إلى admin للتوافق مع قاعدة البيانات
-      let senderRole: 'client' | 'admin' | 'designer' | 'system' = user.role as any;
-      
-      // إذا كان المستخدم مصمم، نستخدم دور admin في قاعدة البيانات
-      if (user.role === 'designer') {
-        senderRole = 'admin';
-      }
-      
-      console.log('Adjusted sender role for database:', senderRole);
+      console.log('=== CHAT WINDOW SENDING MESSAGE ===');
+      console.log('User:', user.name, 'Role:', user.role, 'ID:', user.id);
+      console.log('Order ID:', order.id);
+      console.log('Message:', newMessage);
       
       const result = await unifiedChatService.sendMessage({
         order_id: order.id,
         sender_id: user.id,
         sender_name: user.name,
-        sender_role: senderRole,
+        sender_role: user.role as 'client' | 'admin' | 'designer' | 'system',
         content: newMessage,
         message_type: 'text'
       });
@@ -106,9 +95,8 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
         throw new Error(result.error?.message || 'فشل في إرسال الرسالة');
       }
 
-      console.log('Message sent successfully');
+      console.log('Message sent successfully from chat window');
       setNewMessage('');
-      // سيتم إضافة الرسالة عبر الاشتراك الفوري
       
       toast({
         title: "تم الإرسال",
@@ -116,7 +104,7 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
       });
       
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending message from chat window:', error);
       toast({
         title: "خطأ",
         description: "فشل في إرسال الرسالة. يرجى المحاولة مرة أخرى.",
@@ -191,7 +179,6 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
         </CardHeader>
         
         <CardContent className="flex-1 flex flex-col p-0">
-          {/* Messages Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {isLoadingMessages ? (
               <div className="text-center py-12">
@@ -222,7 +209,7 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
                     {message.sender_role !== 'system' && (
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium opacity-75">
-                          {message.sender_name} ({getRoleDisplayName(message.sender_role)})
+                          {message.sender_name} ({getRoleDisplayName(message.sender_role === 'admin' && message.sender_name !== 'النظام' ? 'designer' : message.sender_role)})
                         </span>
                         <span className="text-xs opacity-60">
                           {new Date(message.created_at).toLocaleTimeString('ar', {
@@ -241,7 +228,6 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input */}
           <div className="border-t bg-white p-4">
             <form onSubmit={handleSendMessage} className="flex gap-2">
               <div className="flex-1 relative">
