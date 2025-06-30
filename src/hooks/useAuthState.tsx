@@ -7,11 +7,9 @@ import { supabase } from '@/integrations/supabase/client';
 export const useAuthState = () => {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isInitializing, setIsInitializing] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
+  const [isInitializing, setIsInitializing] = useState(false);
 
-  // Memoized callback for handling auth state changes
+  // Optimized auth state change handler
   const handleAuthStateChange = useCallback(async (event: string, session: any) => {
     console.log('Auth state changed:', event, session?.user?.id);
     
@@ -21,34 +19,20 @@ export const useAuthState = () => {
         if (profile) {
           setCurrentUser(profile);
           setIsAuthenticated(true);
-          setRetryCount(0); // Reset retry count on success
         } else {
-          console.warn('Profile not found for user:', session.user.id);
           setCurrentUser(null);
           setIsAuthenticated(false);
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
-        
-        // Retry logic for profile fetching
-        if (retryCount < maxRetries) {
-          setRetryCount(prev => prev + 1);
-          setTimeout(() => {
-            handleAuthStateChange(event, session);
-          }, 1000 * (retryCount + 1)); // Exponential backoff
-        } else {
-          setCurrentUser(null);
-          setIsAuthenticated(false);
-        }
+        setCurrentUser(null);
+        setIsAuthenticated(false);
       }
     } else {
       setCurrentUser(null);
       setIsAuthenticated(false);
-      setRetryCount(0);
     }
-    
-    setIsInitializing(false);
-  }, [retryCount, maxRetries]);
+  }, []);
 
   // Initial setup and auth listener
   useEffect(() => {
@@ -63,17 +47,10 @@ export const useAuthState = () => {
       }
     );
 
-    // Check for existing session with timeout
+    // Check for existing session immediately
     const checkCurrentSession = async () => {
       try {
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 5000)
-        );
-        
-        const sessionPromise = supabaseService.getCurrentSession();
-        
-        const session = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        
+        const session = await supabaseService.getCurrentSession();
         if (isSubscribed && session?.user) {
           const profile = await supabaseService.getProfile(session.user.id);
           if (profile) {
@@ -83,11 +60,6 @@ export const useAuthState = () => {
         }
       } catch (error) {
         console.error('Error checking session:', error);
-        // Continue without session if there's an error
-      } finally {
-        if (isSubscribed) {
-          setIsInitializing(false);
-        }
       }
     };
 
@@ -100,7 +72,7 @@ export const useAuthState = () => {
     };
   }, [handleAuthStateChange]);
 
-  // Optimized auth success handler
+  // Fast auth success handler
   const handleAuthSuccess = useCallback(async () => {
     try {
       const session = await supabaseService.getCurrentSession();
@@ -116,7 +88,7 @@ export const useAuthState = () => {
     }
   }, []);
 
-  // Optimized logout handler
+  // Fast logout handler
   const handleLogout = useCallback(async () => {
     try {
       await supabaseService.signOut();
