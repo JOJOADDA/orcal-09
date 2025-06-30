@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -180,7 +179,7 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
         phone: signupData.phone,
         specialization: signupData.specialization || 'تصميم عام',
         experienceYears: parseInt(signupData.experienceYears) || 0,
-        portfolioUrl: signupData.portfolioUrl
+        portfolioUrl: signupData.portfolioUrl || null // Make it optional by allowing null
       });
 
       if (error) {
@@ -486,12 +485,12 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
                       <div className="space-y-2">
                         <Label htmlFor="signup-portfolio" className="flex items-center gap-2">
                           <Globe className="w-4 h-4 text-orange-500" />
-                          رابط الأعمال
+                          رابط الأعمال (اختياري)
                         </Label>
                         <Input
                           id="signup-portfolio"
                           type="url"
-                          placeholder="https://portfolio.com"
+                          placeholder="https://portfolio.com (اختياري)"
                           value={signupData.portfolioUrl}
                           onChange={(e) => setSignupData({ ...signupData, portfolioUrl: e.target.value })}
                           disabled={isLoading}
