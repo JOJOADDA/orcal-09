@@ -25,7 +25,7 @@ export class DesignerService extends CacheService {
     try {
       console.log('Designer signup attempt:', designerData.email);
       
-      // تحقق من وجود المصمم مسبقاً
+      // تحقق من وجود المصمم مسبقاً بالبريد الإلكتروني
       const existingDesigner = await this.checkExistingDesigner(designerData.email);
       if (existingDesigner) {
         return { 
@@ -52,6 +52,17 @@ export class DesignerService extends CacheService {
 
       if (data.user && !error) {
         console.log('Designer signup successful for user:', data.user.id);
+        
+        // التأكد من إنشاء سجل المصمم في جدول designers مع الربط الصحيح
+        await this.ensureDesignerRecord(data.user.id, {
+          name: designerData.name,
+          email: designerData.email,
+          phone: designerData.phone || '',
+          specialization: designerData.specialization || 'تصميم عام',
+          experienceYears: designerData.experienceYears || 0,
+          portfolioUrl: designerData.portfolioUrl || ''
+        });
+        
         this.clearCache('profile');
         this.clearCache('all_designers');
       }
@@ -59,6 +70,41 @@ export class DesignerService extends CacheService {
       return { data, error };
     } catch (error) {
       return { data: null, error: this.handleError(error, 'Designer SignUp') };
+    }
+  }
+
+  private async ensureDesignerRecord(userId: string, designerData: any) {
+    try {
+      // التحقق من وجود السجل أولاً
+      const { data: existingRecord } = await supabase
+        .from('designers')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (!existingRecord) {
+        // إنشاء السجل إذا لم يكن موجوداً
+        const { error } = await supabase
+          .from('designers')
+          .insert({
+            user_id: userId,
+            name: designerData.name,
+            email: designerData.email,
+            phone: designerData.phone,
+            specialization: designerData.specialization,
+            experience_years: designerData.experienceYears,
+            portfolio_url: designerData.portfolioUrl,
+            status: 'active'
+          });
+
+        if (error) {
+          console.error('Error creating designer record:', error);
+        } else {
+          console.log('Designer record created successfully for user:', userId);
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring designer record:', error);
     }
   }
 
@@ -91,7 +137,7 @@ export class DesignerService extends CacheService {
         .single();
 
       if (error) {
-        this.handleError(error, 'Get Designer');
+        console.error('Designer fetch error:', error);
         return null;
       }
       
@@ -100,6 +146,34 @@ export class DesignerService extends CacheService {
       return data;
     } catch (error) {
       this.handleError(error, 'Get Designer');
+      return null;
+    }
+  }
+
+  async getDesignerByEmail(email: string) {
+    try {
+      const cacheKey = `designer_email_${email}`;
+      const cached = this.getFromCache(cacheKey);
+      if (cached) return cached;
+
+      console.log('Fetching designer by email:', email);
+      
+      const { data, error } = await supabase
+        .from('designers')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (error) {
+        console.error('Designer fetch by email error:', error);
+        return null;
+      }
+      
+      this.setCache(cacheKey, data);
+      console.log('Designer fetched by email successfully:', data);
+      return data;
+    } catch (error) {
+      this.handleError(error, 'Get Designer By Email');
       return null;
     }
   }

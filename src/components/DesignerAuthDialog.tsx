@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +9,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { User, Lock, Eye, EyeOff, Palette, Mail, Phone, Briefcase, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabaseService } from '@/services/supabaseService';
+import { authService } from '@/services/auth/authService';
+import { designerService } from '@/services/designers/designerService';
 
 interface DesignerAuthDialogProps {
   onClose: () => void;
@@ -77,7 +79,9 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabaseService.signIn(loginData.email, loginData.password, 'email');
+      console.log('Attempting designer login with email:', loginData.email);
+      
+      const { data, error } = await authService.signIn(loginData.email, loginData.password, 'email');
       
       if (error) {
         let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
@@ -97,9 +101,26 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
       }
 
       if (data.user) {
-        // Check if user is a designer
-        const designer = await supabaseService.getDesignerByUserId(data.user.id);
+        console.log('Auth successful, checking designer status for user:', data.user.id);
+        
+        // البحث عن المصمم بالـ user_id أولاً
+        let designer = await designerService.getDesignerByUserId(data.user.id);
+        
+        // إذا لم نجد بالـ user_id، نبحث بالبريد الإلكتروني
+        if (!designer) {
+          console.log('Designer not found by user_id, searching by email...');
+          designer = await designerService.getDesignerByEmail(loginData.email);
+          
+          // إذا وجدنا المصمم بالبريد الإلكتروني ولكن user_id غير مربوط، نقوم بربطه
+          if (designer && !designer.user_id) {
+            console.log('Found designer by email, linking user_id...');
+            await designerService.updateDesigner(data.user.id, { user_id: data.user.id });
+            designer.user_id = data.user.id;
+          }
+        }
+        
         if (designer) {
+          console.log('Designer found:', designer);
           toast({
             title: "تم تسجيل الدخول بنجاح!",
             description: `مرحباً ${designer.name}، يمكنك الآن إدارة المشاريع`
@@ -110,12 +131,13 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
             email: designer.email 
           });
         } else {
+          console.log('Designer not found in database');
           toast({
             title: "غير مصرح",
-            description: "هذا الحساب غير مسجل كمصمم",
+            description: "هذا الحساب غير مسجل كمصمم. يرجى التأكد من إنشاء حساب مصمم أولاً.",
             variant: "destructive"
           });
-          await supabaseService.signOut();
+          await authService.signOut();
         }
       }
     } catch (error) {
@@ -172,20 +194,21 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabaseService.signUpDesigner({
+      const { data, error } = await designerService.signUpDesigner({
         email: signupData.email,
         password: signupData.password,
         name: signupData.name,
         phone: signupData.phone,
         specialization: signupData.specialization || 'تصميم عام',
         experienceYears: parseInt(signupData.experienceYears) || 0,
-        portfolioUrl: signupData.portfolioUrl || null // Make it optional by allowing null
+        portfolioUrl: signupData.portfolioUrl
       });
 
       if (error) {
         let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
         
-        if (error.message.includes('User already registered')) {
+        if (error.message.includes('User already registered') || 
+            error.message.includes('Designer already exists')) {
           errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً";
         } else if (error.message.includes('Password should be at least 6 characters')) {
           errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
