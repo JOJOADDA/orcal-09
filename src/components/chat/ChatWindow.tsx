@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Send, MessageSquare, Paperclip, Download, Image, File, Phone, Video } from 'lucide-react';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { ArrowLeft, Send, Paperclip, Mic, Phone, Video, User } from 'lucide-react';
 import { Profile, ChatMessage, DesignOrder, OrderFile } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { unifiedChatService } from '@/services/unifiedChatService';
@@ -28,18 +28,15 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   useEffect(() => {
     loadMessages();
     
-    // الاشتراك في الرسائل الجديدة
     const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (newMessage) => {
       console.log('New message received:', newMessage);
       setMessages(prev => {
-        // تجنب التكرار
         if (prev.some(msg => msg.id === newMessage.id)) {
           return prev;
         }
         return [...prev, newMessage];
       });
       
-      // إشعار صوتي للرسائل الجديدة
       if (newMessage.sender_id !== user.id) {
         playNotificationSound();
       }
@@ -57,10 +54,9 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   }, [messages]);
 
   const playNotificationSound = () => {
-    // تشغيل صوت إشعار بسيط
-    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D2u2YZCD2V2/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D2u2YZCD2V2/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D2u2YZCD2V2/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D2u2YZCD2V2/LNeSsFJHfH8N2QQAoUXrTp66iJNwgZaLvt559N');
+    const audio = new Audio('data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+D2u2YZCD2V2/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D2u2YZCD2V2/LNeSsFJHfH8N2QQAoUXrTp66hVFApGn+D2u2YZCD2V2/LNeSsFJHfH8N2QQAoUXrTp66iJNwgZaLvt559N');
     audio.volume = 0.3;
-    audio.play().catch(() => {}); // تجاهل الأخطاء
+    audio.play().catch(() => {});
   };
 
   const loadMessages = async () => {
@@ -68,8 +64,6 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
     try {
       const orderMessages = await unifiedChatService.getMessages(order.id);
       setMessages(orderMessages);
-      
-      // تمييز الرسائل كمقروءة
       await unifiedChatService.markMessagesAsRead(order.id, user.id);
     } catch (error) {
       console.error('Error loading messages:', error);
@@ -126,20 +120,17 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
     setIsTyping(true);
     
     try {
-      // رفع الملفات أولاً إذا كانت موجودة
       const uploadedFiles = selectedFiles.length > 0 ? await uploadFiles() : [];
       
-      // تحديد دور المرسل بشكل صحيح
       let senderRole: 'client' | 'admin' | 'designer' | 'system';
       if (user.role === 'designer') {
-        senderRole = 'designer'; // استخدام designer مباشرة
+        senderRole = 'designer';
       } else if (user.role === 'admin') {
         senderRole = 'admin';
       } else {
         senderRole = 'client';
       }
       
-      // إرسال الرسالة
       const result = await unifiedChatService.sendMessage({
         order_id: order.id,
         sender_id: user.id,
@@ -154,18 +145,11 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
         throw result.error;
       }
 
-      // مسح النموذج
       setNewMessage('');
       setSelectedFiles([]);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
-
-      toast({
-        title: "تم الإرسال",
-        description: "تم إرسال الرسالة بنجاح",
-        variant: "default"
-      });
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -179,50 +163,13 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
     }
   };
 
-  const getStatusColor = (status: DesignOrder['status']) => {
-    const colors = {
-      'pending': 'bg-amber-50 text-amber-700 border-amber-200',
-      'in-progress': 'bg-blue-50 text-blue-700 border-blue-200',
-      'completed': 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      'delivered': 'bg-purple-50 text-purple-700 border-purple-200'
-    };
-    return colors[status];
-  };
-
-  const getStatusText = (status: DesignOrder['status']) => {
-    const statusMap = {
-      'pending': 'قيد الانتظار',
-      'in-progress': 'جاري التنفيذ',
-      'completed': 'مكتمل',
-      'delivered': 'تم التسليم'
-    };
-    return statusMap[status];
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 بايت';
-    const k = 1024;
-    const sizes = ['بايت', 'كيلوبايت', 'ميجابايت', 'جيجابايت'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getFileIcon = (fileName: string) => {
-    const extension = fileName.split('.').pop()?.toLowerCase();
-    if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(extension || '')) {
-      return <Image className="w-4 h-4 text-blue-500" />;
-    }
-    return <File className="w-4 h-4 text-gray-500" />;
-  };
-
-  const getRoleColor = (role: string) => {
-    const colors = {
-      'client': 'text-blue-600',
-      'admin': 'text-purple-600',
-      'designer': 'text-green-600',
-      'system': 'text-orange-600'
-    };
-    return colors[role as keyof typeof colors] || 'text-gray-600';
+  const formatTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('ar-SA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
   };
 
   const getRoleText = (role: string) => {
@@ -236,134 +183,143 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
-      <Card className="w-full max-w-5xl h-[85vh] bg-white shadow-2xl flex flex-col border-0 rounded-2xl overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 p-6 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white">
-          <div className="flex items-center gap-4">
-            <div className="p-2 bg-white/20 rounded-full">
-              <MessageSquare className="w-6 h-6" />
-            </div>
-            <div>
-              <CardTitle className="text-xl font-bold">
-                دردشة الطلب: {order.design_type}
-              </CardTitle>
-              <div className="flex items-center gap-3 mt-2">
-                <span className={`px-3 py-1 rounded-full text-xs font-medium border bg-white/20 text-white border-white/30`}>
-                  {getStatusText(order.status)}
-                </span>
-                <span className="text-sm text-white/80">
-                  {new Date(order.created_at).toLocaleDateString('ar-SA')}
-                </span>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-10 w-10 p-0 hover:bg-white/20 text-white"
-            >
-              <Phone className="w-5 h-5" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-10 w-10 p-0 hover:bg-white/20 text-white"
-            >
-              <Video className="w-5 h-5" />
-            </Button>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-0 z-50">
+      <Card className="w-full max-w-md h-full bg-white shadow-none flex flex-col border-0 rounded-none sm:max-w-lg sm:h-[90vh] sm:rounded-xl sm:border">
+        {/* Telegram-style Header */}
+        <CardHeader className="flex flex-row items-center justify-between p-4 bg-[#517DA2] text-white shadow-sm">
+          <div className="flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
               onClick={onClose}
-              className="h-10 w-10 p-0 hover:bg-red-500/20 text-white border border-white/30 rounded-full"
+              className="h-8 w-8 p-0 hover:bg-white/20 text-white"
             >
-              <X className="w-5 h-5" />
+              <ArrowLeft className="w-5 h-5" />
+            </Button>
+            
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
+                <User className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-white">
+                  {order.design_type}
+                </h3>
+                <p className="text-xs text-white/80">
+                  آخر نشاط منذ دقائق
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-white/20 text-white"
+            >
+              <Phone className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 hover:bg-white/20 text-white"
+            >
+              <Video className="w-4 h-4" />
             </Button>
           </div>
         </CardHeader>
         
         <CardContent className="flex-1 flex flex-col p-0">
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gradient-to-b from-gray-50 to-white">
+          {/* Messages Area - Telegram style background */}
+          <div 
+            className="flex-1 overflow-y-auto p-4 space-y-3"
+            style={{
+              backgroundImage: `url("data:image/svg+xml,%3Csvg width='100' height='100' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cpattern id='telegram-bg' x='0' y='0' width='100' height='100' patternUnits='userSpaceOnUse'%3E%3Cg fill='%23f0f0f0' fill-opacity='0.1'%3E%3Ccircle cx='20' cy='20' r='2'/%3E%3Ccircle cx='80' cy='80' r='2'/%3E%3C/g%3E%3C/pattern%3E%3C/defs%3E%3Crect width='100' height='100' fill='url(%23telegram-bg)'/%3E%3C/svg%3E")`,
+              backgroundColor: '#DCE2E8'
+            }}
+          >
             {isLoadingMessages ? (
               <div className="text-center py-16">
-                <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent mx-auto mb-6"></div>
-                <p className="text-gray-500 text-lg">جاري تحميل الرسائل...</p>
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-[#517DA2] border-t-transparent mx-auto mb-4"></div>
+                <p className="text-gray-500">جاري تحميل الرسائل...</p>
               </div>
             ) : messages.length === 0 ? (
               <div className="text-center py-16">
-                <div className="p-4 bg-blue-50 rounded-full w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                  <MessageSquare className="w-10 h-10 text-blue-500" />
+                <div className="w-16 h-16 bg-[#517DA2]/20 rounded-full mx-auto mb-4 flex items-center justify-center">
+                  <Send className="w-8 h-8 text-[#517DA2]" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-700 mb-3">لا توجد رسائل بعد</h3>
-                <p className="text-gray-500">ابدأ محادثة جديدة مع الطرف الآخر</p>
+                <h3 className="text-lg font-medium text-gray-700 mb-2">لا توجد رسائل بعد</h3>
+                <p className="text-gray-500">ابدأ محادثة جديدة</p>
               </div>
             ) : (
               messages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'} animate-in slide-in-from-bottom duration-300`}
+                  className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div
-                    className={`max-w-[75%] ${
-                      message.sender_id === user.id
-                        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-3xl rounded-br-lg'
-                        : message.sender_role === 'system'
-                        ? 'bg-amber-50 text-amber-800 border border-amber-200 rounded-2xl'
-                        : 'bg-white text-gray-900 shadow-lg border border-gray-100 rounded-3xl rounded-bl-lg'
-                    } p-4 relative group`}
-                  >
-                    {message.sender_role !== 'system' && (
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className={`text-xs font-bold ${
-                          message.sender_id === user.id ? 'text-white/90' : getRoleColor(message.sender_role)
-                        }`}>
+                  <div className="max-w-[80%] group">
+                    {/* Message bubble */}
+                    <div
+                      className={`relative px-4 py-2 shadow-sm ${
+                        message.sender_id === user.id
+                          ? 'bg-[#4CAF50] text-white rounded-2xl rounded-br-md ml-12'
+                          : message.sender_role === 'system'
+                          ? 'bg-amber-100 text-amber-800 border border-amber-200 rounded-2xl'
+                          : 'bg-white text-gray-900 rounded-2xl rounded-bl-md mr-12'
+                      }`}
+                    >
+                      {/* Sender name for received messages */}
+                      {message.sender_role !== 'system' && message.sender_id !== user.id && (
+                        <div className="text-xs font-medium text-[#517DA2] mb-1">
                           {message.sender_name} ({getRoleText(message.sender_role)})
-                        </span>
-                        <span className={`text-xs ${
-                          message.sender_id === user.id ? 'text-white/70' : 'text-gray-500'
-                        }`}>
-                          {new Date(message.created_at).toLocaleTimeString('ar-SA', {
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </span>
-                      </div>
-                    )}
-                    
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
-                    
-                    {message.message_type === 'file' && (
-                      <div className={`mt-3 p-3 rounded-xl ${
-                        message.sender_id === user.id 
-                          ? 'bg-white/20' 
-                          : 'bg-gray-50 border border-gray-200'
-                      }`}>
-                        <div className="flex items-center gap-2">
-                          {getFileIcon('file')}
-                          <span className="text-xs font-medium">ملف مرفق</span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="h-6 w-6 p-0 ml-auto"
-                          >
-                            <Download className="w-3 h-3" />
-                          </Button>
                         </div>
+                      )}
+                      
+                      {/* Message content */}
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                        {message.content}
+                      </p>
+                      
+                      {/* File attachment */}
+                      {message.message_type === 'file' && (
+                        <div className={`mt-2 p-2 rounded-lg ${
+                          message.sender_id === user.id 
+                            ? 'bg-black/10' 
+                            : 'bg-gray-100'
+                        }`}>
+                          <div className="flex items-center gap-2 text-xs">
+                            <Paperclip className="w-3 h-3" />
+                            <span>ملف مرفق</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Time and status */}
+                      <div className={`flex items-center gap-1 mt-1 justify-end ${
+                        message.sender_id === user.id ? 'text-white/70' : 'text-gray-500'
+                      }`}>
+                        <span className="text-xs">
+                          {formatTime(message.created_at)}
+                        </span>
+                        {message.sender_id === user.id && (
+                          <div className="flex">
+                            <div className="w-3 h-3 flex items-center justify-center">
+                              <div className="text-xs">✓✓</div>
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               ))
             )}
             
-            {/* مؤشر الكتابة */}
+            {/* Typing indicator */}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-gray-200 rounded-3xl rounded-bl-lg p-4 animate-pulse">
+                <div className="bg-white rounded-2xl rounded-bl-md p-3 mr-12 shadow-sm">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
@@ -378,32 +334,27 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
 
           {/* Selected Files Preview */}
           {selectedFiles.length > 0 && (
-            <div className="border-t bg-gray-50 p-4">
-              <div className="flex flex-wrap gap-3">
+            <div className="border-t bg-gray-50 p-3">
+              <div className="flex flex-wrap gap-2">
                 {selectedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center gap-3 bg-white rounded-xl p-3 shadow-sm border text-sm group">
-                    {getFileIcon(file.name)}
-                    <div className="flex-1 min-w-0">
-                      <p className="truncate font-medium text-gray-900">{file.name}</p>
-                      <p className="text-gray-500 text-xs">{formatFileSize(file.size)}</p>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
+                  <div key={index} className="flex items-center gap-2 bg-white rounded-lg p-2 shadow-sm border text-xs">
+                    <Paperclip className="w-3 h-3 text-[#517DA2]" />
+                    <span className="truncate max-w-20">{file.name}</span>
+                    <button
                       onClick={() => removeSelectedFile(index)}
-                      className="h-6 w-6 p-0 hover:bg-red-100 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="text-red-500 hover:text-red-700 ml-1"
                     >
-                      <X className="w-3 h-3 text-red-500" />
-                    </Button>
+                      ×
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Message Input */}
-          <div className="border-t bg-white p-6">
-            <form onSubmit={handleSendMessage} className="flex gap-3">
+          {/* Input Area - Telegram style */}
+          <div className="p-4 bg-white border-t">
+            <form onSubmit={handleSendMessage} className="flex items-end gap-2">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -413,31 +364,41 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
                 accept="image/*,application/pdf,.doc,.docx,.txt,.zip,.rar"
               />
               
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                className="h-10 w-10 p-0 hover:bg-gray-100 rounded-full flex-shrink-0"
+                disabled={isLoading}
+              >
+                <Paperclip className="w-5 h-5 text-gray-500" />
+              </Button>
+              
               <div className="flex-1 relative">
                 <Input
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="اكتب رسالتك هنا..."
-                  className="pr-14 h-14 rounded-2xl border-2 border-gray-200 focus:border-blue-400 text-base bg-gray-50 focus:bg-white transition-all"
+                  placeholder="اكتب رسالة..."
+                  className="rounded-3xl border-gray-300 pl-12 pr-4 py-3 h-12 bg-gray-50 focus:bg-white focus:border-[#517DA2] text-sm"
                   disabled={isLoading}
                   dir="rtl"
                 />
+                
                 <Button
-                  type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-blue-100 rounded-full"
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-gray-100 rounded-full"
                   disabled={isLoading}
                 >
-                  <Paperclip className="w-4 h-4 text-gray-500" />
+                  <Mic className="w-4 h-4 text-gray-500" />
                 </Button>
               </div>
               
               <Button
                 type="submit"
                 disabled={(!newMessage.trim() && selectedFiles.length === 0) || isLoading}
-                className="h-14 px-8 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                className="h-12 w-12 p-0 bg-[#4CAF50] hover:bg-[#45a049] rounded-full flex-shrink-0 shadow-lg disabled:opacity-50"
               >
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
