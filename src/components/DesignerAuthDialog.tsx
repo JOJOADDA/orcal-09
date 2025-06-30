@@ -203,9 +203,28 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
       if (data.user) {
         toast({
           title: "تم إنشاء الحساب بنجاح!",
-          description: "يرجى التحقق من بريدك الإلكتروني لتأكيد الحساب"
+          description: "تم إنشاء حساب المصمم بنجاح. يمكنك الآن تسجيل الدخول",
+          variant: "default"
+        });
+        
+        // Clear form and switch to login tab
+        setSignupData({
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: '',
+          phone: '',
+          specialization: '',
+          experienceYears: '0',
+          portfolioUrl: ''
         });
         setActiveTab('login');
+        
+        // Pre-fill login email
+        setLoginData({
+          email: signupData.email,
+          password: ''
+        });
       }
     } catch (error) {
       console.error('Designer signup error:', error);
