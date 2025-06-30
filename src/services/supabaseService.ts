@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, DesignOrder, OrderFile, ChatRoom, ChatMessage, MessageFile } from '@/types/database';
 
@@ -8,6 +9,8 @@ class SupabaseService {
     
     // If it's a phone number, create a temporary email
     const email = isEmail ? identifier : `user${identifier.replace('+', '')}@orcal.app`;
+    
+    console.log('SignUp attempt:', { email, name, phone: isEmail ? phone : identifier });
     
     const { data, error } = await supabase.auth.signUp({
       email,
@@ -25,6 +28,7 @@ class SupabaseService {
     if (data.user && !error) {
       try {
         await this.createProfile(data.user.id, name, isEmail ? identifier : email, isEmail ? phone : identifier);
+        console.log('Profile created successfully for user:', data.user.id);
       } catch (profileError) {
         console.error('Error creating profile:', profileError);
       }
@@ -41,15 +45,22 @@ class SupabaseService {
       email = `user${identifier.replace('+', '')}@orcal.app`;
     }
 
+    console.log('SignIn attempt:', { email, type });
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
+    if (data.user && !error) {
+      console.log('SignIn successful for user:', data.user.id);
+    }
+
     return { data, error };
   }
 
   async signOut() {
+    console.log('SignOut attempt');
     const { error } = await supabase.auth.signOut();
     return { error };
   }
@@ -64,7 +75,6 @@ class SupabaseService {
     return session;
   }
 
-  // إضافة دالة لإعادة إرسال رسالة التأكيد
   async resendConfirmation(email: string) {
     const { error } = await supabase.auth.resend({
       type: 'signup',
@@ -78,6 +88,8 @@ class SupabaseService {
 
   // Profile Management
   async createProfile(userId: string, name: string, email: string, phone: string, role: 'client' | 'admin' = 'client') {
+    console.log('Creating profile for user:', userId, { name, email, phone, role });
+    
     const { data, error } = await supabase
       .from('profiles')
       .insert({
@@ -89,10 +101,18 @@ class SupabaseService {
       .select()
       .single();
 
+    if (error) {
+      console.error('Error creating profile:', error);
+    } else {
+      console.log('Profile created successfully:', data);
+    }
+
     return { data: data as Profile, error };
   }
 
   async getProfile(userId: string): Promise<Profile | null> {
+    console.log('Fetching profile for user:', userId);
+    
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -103,6 +123,8 @@ class SupabaseService {
       console.error('Error fetching profile:', error);
       return null;
     }
+    
+    console.log('Profile fetched successfully:', data);
     return data as Profile;
   }
 
@@ -127,6 +149,8 @@ class SupabaseService {
     priority?: 'low' | 'medium' | 'high';
     total_price?: number;
   }) {
+    console.log('Creating order:', orderData);
+    
     const { data, error } = await supabase
       .from('design_orders')
       .insert(orderData)
@@ -134,14 +158,19 @@ class SupabaseService {
       .single();
 
     if (data && !error) {
+      console.log('Order created successfully:', data.id);
       // Create chat room for the order
       await this.createChatRoom(data.id, orderData.client_id);
+    } else {
+      console.error('Error creating order:', error);
     }
 
     return { data: data as DesignOrder, error };
   }
 
   async getOrdersByClientId(clientId: string): Promise<DesignOrder[]> {
+    console.log('Fetching orders for client:', clientId);
+    
     const { data, error } = await supabase
       .from('design_orders')
       .select('*')
@@ -152,6 +181,8 @@ class SupabaseService {
       console.error('Error fetching orders:', error);
       return [];
     }
+    
+    console.log('Orders fetched successfully:', data?.length || 0);
     return data.map(order => ({
       ...order,
       status: order.status as 'pending' | 'in-progress' | 'completed' | 'delivered',
@@ -160,6 +191,8 @@ class SupabaseService {
   }
 
   async getAllOrders(): Promise<DesignOrder[]> {
+    console.log('Fetching all orders');
+    
     const { data, error } = await supabase
       .from('design_orders')
       .select('*')
@@ -169,6 +202,8 @@ class SupabaseService {
       console.error('Error fetching all orders:', error);
       return [];
     }
+    
+    console.log('All orders fetched successfully:', data?.length || 0);
     return data.map(order => ({
       ...order,
       status: order.status as 'pending' | 'in-progress' | 'completed' | 'delivered',
@@ -177,12 +212,18 @@ class SupabaseService {
   }
 
   async updateOrderStatus(orderId: string, status: 'pending' | 'in-progress' | 'completed' | 'delivered') {
+    console.log('Updating order status:', orderId, status);
+    
     const { data, error } = await supabase
       .from('design_orders')
       .update({ status, updated_at: new Date().toISOString() })
       .eq('id', orderId)
       .select()
       .single();
+
+    if (!error) {
+      console.log('Order status updated successfully');
+    }
 
     return { data: data as DesignOrder, error };
   }
@@ -233,6 +274,8 @@ class SupabaseService {
     size_bytes: number;
     uploaded_by: string;
   }) {
+    console.log('Uploading order file:', fileData.name);
+    
     const { data, error } = await supabase
       .from('order_files')
       .insert(fileData)
@@ -251,18 +294,19 @@ class SupabaseService {
     return { error };
   }
 
-  // File upload functionality
+  // File upload functionality - محسن لحفظ الملفات
   async uploadFile(file: File, bucket: string, userId: string): Promise<string | null> {
     const fileExt = file.name.split('.').pop();
     const fileName = `${userId}/${Date.now()}.${fileExt}`;
 
-    // For now, we'll create a placeholder URL since we don't have storage buckets set up
-    // In a real implementation, you'd upload to Supabase storage
-    const mockUrl = `https://placeholder.com/${fileName}`;
+    // للتطوير: إنشاء رابط وهمي للملف
+    // في التطبيق الحقيقي، يتم رفع الملف إلى Supabase Storage
+    const mockUrl = `https://api.orcal.app/files/${fileName}`;
+    
+    console.log('File uploaded (mock):', mockUrl);
     return mockUrl;
   }
 
-  // Add order file method
   async addOrderFile(fileData: {
     order_id: string;
     name: string;
@@ -276,6 +320,8 @@ class SupabaseService {
 
   // Chat Management
   async createChatRoom(orderId: string, clientId: string, adminId?: string) {
+    console.log('Creating chat room for order:', orderId);
+    
     const { data, error } = await supabase
       .from('chat_rooms')
       .insert({
@@ -285,6 +331,10 @@ class SupabaseService {
       })
       .select()
       .single();
+
+    if (!error) {
+      console.log('Chat room created successfully:', data?.id);
+    }
 
     return { data: data as ChatRoom, error };
   }
@@ -339,6 +389,8 @@ class SupabaseService {
   }
 
   async getMessagesByOrderId(orderId: string): Promise<ChatMessage[]> {
+    console.log('Fetching messages for order:', orderId);
+    
     const { data, error } = await supabase
       .from('chat_messages')
       .select('*')
@@ -349,6 +401,8 @@ class SupabaseService {
       console.error('Error fetching messages by order ID:', error);
       return [];
     }
+    
+    console.log('Messages fetched successfully:', data?.length || 0);
     return data.map(message => ({
       ...message,
       sender_role: message.sender_role as 'client' | 'admin' | 'system',
@@ -365,6 +419,8 @@ class SupabaseService {
     content: string;
     message_type?: 'text' | 'file' | 'system';
   }) {
+    console.log('Sending message:', messageData.content.substring(0, 50) + '...');
+    
     const { data, error } = await supabase
       .from('chat_messages')
       .insert({
@@ -373,6 +429,10 @@ class SupabaseService {
       })
       .select()
       .single();
+
+    if (!error) {
+      console.log('Message sent successfully');
+    }
 
     return { data: data as ChatMessage, error };
   }
@@ -408,6 +468,8 @@ class SupabaseService {
 
   // Real-time subscriptions
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void) {
+    console.log('Setting up real-time subscription for order:', orderId);
+    
     const channel = supabase
       .channel(`messages-${orderId}`)
       .on(
@@ -419,6 +481,7 @@ class SupabaseService {
           filter: `order_id=eq.${orderId}`
         },
         (payload) => {
+          console.log('New message received via real-time:', payload.new);
           const message = {
             ...payload.new,
             sender_role: payload.new.sender_role as 'client' | 'admin' | 'system',

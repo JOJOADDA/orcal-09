@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +9,7 @@ import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import ChatWindow from './ChatWindow';
 import DesignerLoginDialog from './DesignerLoginDialog';
+import DesignerDashboard from './DesignerDashboard';
 
 interface ClientDashboardProps {
   user: Profile;
@@ -20,6 +22,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showDesignerLogin, setShowDesignerLogin] = useState(false);
+  const [designerData, setDesignerData] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
     loadOrders();
@@ -36,6 +39,25 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
     loadOrders();
     setShowCreateOrder(false);
   };
+
+  const handleDesignerLogin = (data: { name: string; role: string }) => {
+    setDesignerData(data);
+    setShowDesignerLogin(false);
+  };
+
+  const handleDesignerLogout = () => {
+    setDesignerData(null);
+  };
+
+  // إذا كان المصمم مسجل دخول، عرض لوحة تحكم المصممين
+  if (designerData) {
+    return (
+      <DesignerDashboard 
+        designerData={designerData} 
+        onLogout={handleDesignerLogout} 
+      />
+    );
+  }
 
   const getStatusIcon = (status: DesignOrder['status']) => {
     switch (status) {
@@ -127,8 +149,8 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
           </div>
         </div>
 
-        {/* Stats - 2x2 grid on mobile, 4 columns on desktop */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+        {/* Stats - 2x2 grid */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-4">
           {[
             { label: 'إجمالي الطلبات', value: orders.length, color: 'from-blue-500 to-cyan-500' },
             { label: 'قيد الانتظار', value: orders.filter(o => o.status === 'pending').length, color: 'from-yellow-500 to-orange-500' },
@@ -136,11 +158,11 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
             { label: 'مكتملة', value: orders.filter(o => o.status === 'completed' || o.status === 'delivered').length, color: 'from-green-500 to-emerald-500' }
           ].map((stat, index) => (
             <Card key={index} className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
-              <CardContent className="p-3 sm:p-4 md:p-6">
-                <div className={`w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center mb-2 sm:mb-3 md:mb-4`}>
-                  <span className="text-lg sm:text-xl md:text-2xl font-bold text-white">{stat.value}</span>
+              <CardContent className="p-3 sm:p-4">
+                <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-r ${stat.color} flex items-center justify-center mb-2 sm:mb-3`}>
+                  <span className="text-lg sm:text-xl font-bold text-white">{stat.value}</span>
                 </div>
-                <h3 className="font-semibold text-gray-900 text-xs sm:text-sm md:text-base leading-tight">{stat.label}</h3>
+                <h3 className="font-semibold text-gray-900 text-xs sm:text-sm leading-tight">{stat.label}</h3>
               </CardContent>
             </Card>
           ))}
@@ -206,7 +228,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
         </Card>
       </div>
 
-      {/* Create Order Dialog */}
+      {/* Dialogs */}
       {showCreateOrder && (
         <CreateOrderDialog
           user={user}
@@ -215,14 +237,10 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
         />
       )}
 
-      {/* Designer Login Dialog */}
       {showDesignerLogin && (
         <DesignerLoginDialog
           onClose={() => setShowDesignerLogin(false)}
-          onDesignerLogin={(designerData) => {
-            console.log('Designer logged in:', designerData);
-            setShowDesignerLogin(false);
-          }}
+          onDesignerLogin={handleDesignerLogin}
         />
       )}
     </div>

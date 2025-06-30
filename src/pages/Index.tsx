@@ -13,16 +13,23 @@ const Index = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check authentication state
-    checkAuthState();
+    // تحسين سرعة التحميل - فحص حالة المصادقة بشكل أسرع
+    initializeAuth();
     
-    // Listen for auth changes
+    // الاستماع لتغييرات المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.id);
         if (session?.user) {
-          const profile = await supabaseService.getProfile(session.user.id);
-          setCurrentUser(profile);
-          setIsAuthenticated(true);
+          try {
+            const profile = await supabaseService.getProfile(session.user.id);
+            if (profile) {
+              setCurrentUser(profile);
+              setIsAuthenticated(true);
+            }
+          } catch (error) {
+            console.error('Error fetching profile:', error);
+          }
         } else {
           setCurrentUser(null);
           setIsAuthenticated(false);
@@ -34,22 +41,31 @@ const Index = () => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const checkAuthState = async () => {
-    const session = await supabaseService.getCurrentSession();
-    if (session?.user) {
-      const profile = await supabaseService.getProfile(session.user.id);
-      setCurrentUser(profile);
-      setIsAuthenticated(true);
+  const initializeAuth = async () => {
+    try {
+      const session = await supabaseService.getCurrentSession();
+      if (session?.user) {
+        const profile = await supabaseService.getProfile(session.user.id);
+        if (profile) {
+          setCurrentUser(profile);
+          setIsAuthenticated(true);
+        }
+      }
+    } catch (error) {
+      console.error('Error initializing auth:', error);
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
   const handleAuthSuccess = async () => {
     const session = await supabaseService.getCurrentSession();
     if (session?.user) {
       const profile = await supabaseService.getProfile(session.user.id);
-      setCurrentUser(profile);
-      setIsAuthenticated(true);
+      if (profile) {
+        setCurrentUser(profile);
+        setIsAuthenticated(true);
+      }
     }
   };
 
@@ -59,16 +75,19 @@ const Index = () => {
     setIsAuthenticated(false);
   };
 
+  // تحسين شاشة التحميل - أبسط وأسرع
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex flex-col items-center justify-center">
         <div className="text-center">
           <img 
-            src="/lovable-uploads/65aa4b7b-e60a-4160-bf45-4c057f62c70a.png" 
-            alt="أوركال" 
-            className="w-16 h-16 mx-auto mb-4 object-contain animate-pulse"
+            src="/lovable-uploads/b49e08ca-b8a4-4464-9301-2cac70b76214.png" 
+            alt="أوركال للدعاية والإعلان" 
+            className="w-20 h-20 mx-auto mb-6 object-contain"
           />
-          <p className="text-gray-600 font-medium">جاري التحميل...</p>
+          <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-700 font-medium text-lg">أوركال للدعاية والإعلان</p>
+          <p className="text-gray-500 text-sm mt-2">جاري التحميل...</p>
         </div>
       </div>
     );

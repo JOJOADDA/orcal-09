@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -239,12 +240,17 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="text-center space-y-4">
-          <img 
-            src="/lovable-uploads/b49e08ca-b8a4-4464-9301-2cac70b76214.png" 
-            alt="أوركال للدعاية والإعلان" 
-            className="w-20 h-20 mx-auto object-contain"
-          />
-          <CardTitle className="text-2xl font-bold text-gray-900">أوركال للدعاية والإعلان</CardTitle>
+          <div className="flex flex-col items-center">
+            <img 
+              src="/lovable-uploads/b49e08ca-b8a4-4464-9301-2cac70b76214.png" 
+              alt="أوركال للدعاية والإعلان" 
+              className="w-24 h-24 object-contain mb-4"
+            />
+            <div>
+              <CardTitle className="text-2xl font-bold text-gray-900 mb-2">أوركال للدعاية والإعلان</CardTitle>
+              <p className="text-gray-600 text-sm">منصة التصميم الاحترافية</p>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {emailSent && (
@@ -313,7 +319,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                   </div>
                 </div>
 
-                <Button type="submit" disabled={isLoading} className="w-full">
+                <Button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
                   {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
                 </Button>
               </form>
@@ -381,7 +387,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                   />
                 </div>
 
-                <Button type="submit" disabled={isLoading} className="w-full">
+                <Button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
                   {isLoading ? 'جاري التسجيل...' : 'إنشاء الحساب'}
                 </Button>
               </form>

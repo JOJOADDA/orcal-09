@@ -27,7 +27,10 @@ const DesignerLoginDialog = ({ onClose, onDesignerLogin }: DesignerLoginDialogPr
     { name: 'فاطمة أحمد', password: 'designer456' },
     { name: 'محمد علي', password: 'designer789' },
     { name: 'سارة حسن', password: 'designer321' },
-    { name: 'يوسف إبراهيم', password: 'designer654' }
+    { name: 'يوسف إبراهيم', password: 'designer654' },
+    { name: 'مريم عثمان', password: 'designer987' },
+    { name: 'عبدالله حسين', password: 'designer111' },
+    { name: 'زينب محجوب', password: 'designer222' }
   ];
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -156,12 +159,21 @@ const DesignerLoginDialog = ({ onClose, onDesignerLogin }: DesignerLoginDialogPr
           </form>
 
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-            <h4 className="font-semibold text-sm text-gray-700 mb-2">معلومات للمصممين:</h4>
-            <ul className="text-xs text-gray-600 space-y-1">
-              <li>• تأكد من إدخال اسمك الكامل المسجل في النظام</li>
-              <li>• استخدم كلمة المرور الخاصة بك</li>
-              <li>• في حالة نسيان كلمة المرور، تواصل مع الإدارة</li>
-            </ul>
+            <h4 className="font-semibold text-sm text-gray-700 mb-2">بيانات تجريبية للاختبار:</h4>
+            <div className="grid grid-cols-1 gap-2 text-xs text-gray-600">
+              <div className="flex justify-between">
+                <span>أحمد محمد</span>
+                <span>designer123</span>
+              </div>
+              <div className="flex justify-between">
+                <span>فاطمة أحمد</span>
+                <span>designer456</span>
+              </div>
+              <div className="flex justify-between">
+                <span>محمد علي</span>
+                <span>designer789</span>
+              </div>
+            </div>
           </div>
         </div>
       </DialogContent>
