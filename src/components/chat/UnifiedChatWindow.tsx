@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { X, Send, MessageSquare, Paperclip, Image, File, AlertCircle } from 'lucide-react';
 import { Profile, ChatMessage, DesignOrder, MessageFile } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
@@ -243,9 +244,19 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
 
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {isLoadingMessages ? (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                <p className="text-gray-500">جاري تحميل الرسائل...</p>
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <Skeleton className="h-16 w-2/3 rounded-2xl" />
+                </div>
+                <div className="flex justify-start">
+                  <Skeleton className="h-16 w-2/3 rounded-2xl" />
+                </div>
+                <div className="flex justify-end">
+                  <Skeleton className="h-16 w-1/2 rounded-2xl" />
+                </div>
+                <div className="flex justify-start">
+                  <Skeleton className="h-16 w-3/4 rounded-2xl" />
+                </div>
               </div>
             ) : messages.length === 0 ? (
               <div className="text-center py-12">
