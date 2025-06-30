@@ -1,10 +1,11 @@
+
 import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Lock, Eye, EyeOff, Phone, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Phone, Mail, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -89,7 +90,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     };
   }, [signupData, detectIdentifierType, validateEmail, validatePhone, formatPhoneNumber]);
 
-  // Optimized signup handler with better error handling
+  // Optimized signup handler with immediate feedback
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -108,7 +109,13 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       signupData.identifier : 
       formatPhoneNumber(signupData.identifier);
 
+    // Show immediate feedback
     setIsLoading(true);
+    toast({
+      title: "جاري إنشاء الحساب...",
+      description: "يرجى الانتظار قليلاً"
+    });
+
     try {
       const { data, error } = await supabaseService.signUp(
         identifier,
@@ -131,7 +138,6 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
           errorMessage = "هذا البريد الإلكتروني مستخدم مسبقاً";
         }
         
-        console.error('Signup error details:', error);
         toast({
           title: "فشل التسجيل",
           description: errorMessage,
@@ -152,7 +158,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
             title: "تم إنشاء الحساب بنجاح!",
             description: "مرحباً بك في أوركال للدعاية والإعلان"
           });
-          setTimeout(() => onAuthSuccess(), 1000);
+          // Give immediate feedback before redirect
+          setTimeout(() => onAuthSuccess(), 500);
         }
       }
     } catch (error) {
@@ -167,7 +174,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     }
   }, [signupData, signupValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
 
-  // Optimized login handler
+  // Optimized login handler with immediate feedback
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -185,7 +192,13 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       loginData.identifier : 
       formatPhoneNumber(loginData.identifier);
 
+    // Show immediate feedback
     setIsLoading(true);
+    toast({
+      title: "جاري تسجيل الدخول...",
+      description: "يرجى الانتظار قليلاً"
+    });
+
     try {
       const { data, error } = await supabaseService.signIn(identifier, loginData.password, identifierType);
       
@@ -215,7 +228,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
           title: "تم تسجيل الدخول بنجاح!",
           description: "مرحباً بك في أوركال للدعاية والإعلان"
         });
-        onAuthSuccess();
+        // Give immediate feedback before redirect
+        setTimeout(() => onAuthSuccess(), 300);
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -289,8 +303,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
-              <TabsTrigger value="signup">إنشاء حساب</TabsTrigger>
+              <TabsTrigger value="login" disabled={isLoading}>تسجيل الدخول</TabsTrigger>
+              <TabsTrigger value="signup" disabled={isLoading}>إنشاء حساب</TabsTrigger>
             </TabsList>
 
             <TabsContent value="login">
@@ -308,7 +322,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     placeholder="example@email.com أو +249123456789"
                     required
                     disabled={isLoading}
-                    className={!loginValidation.isValid && loginData.identifier ? 'border-red-300' : ''}
+                    className={`transition-all duration-200 ${!loginValidation.isValid && loginData.identifier ? 'border-red-300' : ''} ${isLoading ? 'opacity-50' : ''}`}
                   />
                 </div>
 
@@ -323,7 +337,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       placeholder="********"
                       required
                       disabled={isLoading}
-                      className={!loginValidation.isValid && loginData.password ? 'border-red-300' : ''}
+                      className={`transition-all duration-200 ${!loginValidation.isValid && loginData.password ? 'border-red-300' : ''} ${isLoading ? 'opacity-50' : ''}`}
                     />
                     <Button
                       type="button"
@@ -341,9 +355,16 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                 <Button 
                   type="submit" 
                   disabled={isLoading || !loginValidation.isValid} 
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:opacity-50 transition-all duration-200 transform active:scale-95"
                 >
-                  {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      جاري تسجيل الدخول...
+                    </>
+                  ) : (
+                    'تسجيل الدخول'
+                  )}
                 </Button>
               </form>
             </TabsContent>
@@ -362,7 +383,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
                     disabled={isLoading}
                     required
-                    className={signupValidation.errors.name ? 'border-red-300' : ''}
+                    className={`transition-all duration-200 ${signupValidation.errors.name ? 'border-red-300' : ''} ${isLoading ? 'opacity-50' : ''}`}
                   />
                 </div>
 
@@ -379,7 +400,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, identifier: e.target.value })}
                     disabled={isLoading}
                     required
-                    className={signupValidation.errors.identifier ? 'border-red-300' : ''}
+                    className={`transition-all duration-200 ${signupValidation.errors.identifier ? 'border-red-300' : ''} ${isLoading ? 'opacity-50' : ''}`}
                   />
                   <p className="text-xs text-gray-500">
                     أدخل رقم الهاتف بالمفتاح الدولي +249 أو بريد إلكتروني صحيح
@@ -396,7 +417,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                     disabled={isLoading}
                     required
-                    className={signupValidation.errors.password ? 'border-red-300' : ''}
+                    className={`transition-all duration-200 ${signupValidation.errors.password ? 'border-red-300' : ''} ${isLoading ? 'opacity-50' : ''}`}
                   />
                 </div>
 
@@ -410,16 +431,23 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
                     disabled={isLoading}
                     required
-                    className={signupValidation.errors.confirmPassword ? 'border-red-300' : ''}
+                    className={`transition-all duration-200 ${signupValidation.errors.confirmPassword ? 'border-red-300' : ''} ${isLoading ? 'opacity-50' : ''}`}
                   />
                 </div>
 
                 <Button 
                   type="submit" 
                   disabled={isLoading || !signupValidation.isValid} 
-                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:opacity-50"
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:opacity-50 transition-all duration-200 transform active:scale-95"
                 >
-                  {isLoading ? 'جاري التسجيل...' : 'إنشاء الحساب'}
+                  {isLoading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      جاري التسجيل...
+                    </>
+                  ) : (
+                    'إنشاء الحساب'
+                  )}
                 </Button>
               </form>
             </TabsContent>
