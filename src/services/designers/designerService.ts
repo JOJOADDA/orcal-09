@@ -212,6 +212,7 @@ export class DesignerService extends CacheService {
     experience_years: number;
     portfolio_url: string;
     status: 'active' | 'inactive' | 'pending';
+    user_id: string;
   }>) {
     try {
       const { data, error } = await supabase
@@ -229,6 +230,31 @@ export class DesignerService extends CacheService {
       return { data, error };
     } catch (error) {
       return { data: null, error: this.handleError(error, 'Update Designer') };
+    }
+  }
+
+  async linkDesignerToUser(designerId: string, userId: string) {
+    try {
+      console.log('Linking designer to user:', { designerId, userId });
+      
+      const { data, error } = await supabase
+        .from('designers')
+        .update({ user_id: userId })
+        .eq('id', designerId)
+        .select()
+        .single();
+
+      if (!error) {
+        this.clearCache(`designer_${userId}`);
+        this.clearCache('all_designers');
+        console.log('Designer linked successfully:', data);
+      } else {
+        console.error('Error linking designer:', error);
+      }
+
+      return { data, error };
+    } catch (error) {
+      return { data: null, error: this.handleError(error, 'Link Designer to User') };
     }
   }
 }

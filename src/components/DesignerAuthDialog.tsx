@@ -114,8 +114,10 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
           // إذا وجدنا المصمم بالبريد الإلكتروني ولكن user_id غير مربوط، نقوم بربطه
           if (designer && !designer.user_id) {
             console.log('Found designer by email, linking user_id...');
-            await designerService.updateDesigner(data.user.id, { user_id: data.user.id });
-            designer.user_id = data.user.id;
+            const linkResult = await designerService.linkDesignerToUser(designer.id, data.user.id);
+            if (linkResult.data) {
+              designer.user_id = data.user.id;
+            }
           }
         }
         
