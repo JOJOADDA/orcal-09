@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MessageSquare, Clock, CheckCircle, Truck, AlertCircle, User, LogOut } from 'lucide-react';
-import { supabaseService } from '@/services/supabaseService';
 import { DesignOrder } from '@/types/database';
-import ChatWindow from './ChatWindow';
+import ChatWindow from './chat/ChatWindow';
 import { useToast } from '@/hooks/use-toast';
+import { unifiedChatService } from '@/services/unifiedChatService';
+import { orderService } from '@/services/orders/orderService';
 
 interface DesignerDashboardProps {
   designerData: { name: string; role: string };
@@ -25,7 +26,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     id: `designer-${designerData.name.replace(/\s+/g, '-')}`,
     name: designerData.name,
     phone: '+249123456789',
-    role: 'admin' as const,
+    role: 'designer' as const,
     avatar_url: null,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -38,7 +39,8 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   const loadOrders = async () => {
     setIsLoading(true);
     try {
-      const allOrders = await supabaseService.getAllOrders();
+      const allOrders = await orderService.getAllOrders();
+      console.log('Loaded orders:', allOrders.length);
       setOrders(allOrders);
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -54,7 +56,21 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
 
   const updateOrderStatus = async (orderId: string, status: DesignOrder['status']) => {
     try {
-      await supabaseService.updateOrderStatus(orderId, status);
+      const result = await orderService.updateOrderStatus(orderId, status);
+      if (result.error) {
+        throw result.error;
+      }
+
+      // إرسال رسالة نظام للعميل
+      await unifiedChatService.sendMessage({
+        order_id: orderId,
+        sender_id: 'system',
+        sender_name: 'النظام',
+        sender_role: 'system',
+        content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
+        message_type: 'system'
+      });
+
       await loadOrders();
       toast({
         title: "تم التحديث",
@@ -169,7 +185,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <MessageSquare className="w-5 h-5 text-purple-500" />
-              طلبات التصميم
+              طلبات التصميم ({orders.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -189,7 +205,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
                 {orders.map((order) => (
                   <div
                     key={order.id}
-                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                    className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow bg-white"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
@@ -200,7 +216,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
                             {getStatusText(order.status)}
                           </Badge>
                         </div>
-                        <p className="text-gray-600 text-sm mb-2">{order.description}</p>
+                        <p className="text-gray-600 text-sm mb-2 line-clamp-2">{order.description}</p>
                         <div className="flex items-center gap-4 text-xs text-gray-500">
                           <span>العميل: {order.client_name}</span>
                           <span>الهاتف: {order.client_phone}</span>
@@ -214,6 +230,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
                         variant="outline"
                         size="sm"
                         onClick={() => setSelectedOrderId(order.id)}
+                        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0 hover:from-blue-600 hover:to-purple-700"
                       >
                         <MessageSquare className="w-4 h-4 ml-1" />
                         فتح المحادثة
