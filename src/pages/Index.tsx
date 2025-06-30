@@ -8,6 +8,7 @@ import DesignerLoginButton from '@/components/DesignerLoginButton';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useDesignerAuth } from '@/hooks/useDesignerAuth';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect, useState } from 'react';
 
 const Index = () => {
   const {
@@ -29,8 +30,22 @@ const Index = () => {
     handleDesignerLogout
   } = useDesignerAuth();
 
-  // Show loading skeleton only during initial authentication check
-  if (isInitializing) {
+  const [forceRender, setForceRender] = useState(false);
+
+  // Force render after a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isInitializing) {
+        console.warn('Forcing render due to initialization timeout');
+        setForceRender(true);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timeout);
+  }, [isInitializing]);
+
+  // Show loading skeleton only during initial authentication check and not forced
+  if (isInitializing && !forceRender) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
         <div className="w-full max-w-md space-y-4">

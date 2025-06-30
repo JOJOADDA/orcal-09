@@ -12,8 +12,8 @@ export const useAuthState = () => {
   const handleAuthStateChange = useCallback(async (event: string, session: any) => {
     console.log('Auth state changed:', event, session?.user?.id);
     
-    if (session?.user) {
-      try {
+    try {
+      if (session?.user) {
         let profile = await supabaseService.getProfile(session.user.id);
         
         // إذا لم يكن هناك profile، قم بإنشاء واحد
@@ -39,25 +39,36 @@ export const useAuthState = () => {
           setCurrentUser(null);
           setIsAuthenticated(false);
         }
-      } catch (error) {
-        console.error('Error in auth state change:', error);
+      } else {
         setCurrentUser(null);
         setIsAuthenticated(false);
       }
-    } else {
+    } catch (error) {
+      console.error('Error in auth state change:', error);
       setCurrentUser(null);
       setIsAuthenticated(false);
+    } finally {
+      // تأكد من إيقاف التحميل الأولي في جميع الحالات
+      setIsInitializing(false);
     }
-    
-    setIsInitializing(false);
   }, []);
 
   useEffect(() => {
     let isSubscribed = true;
+    let timeoutId: NodeJS.Timeout;
+
+    // إضافة timeout للتأكد من عدم التعليق في حالة التحميل
+    const initializationTimeout = setTimeout(() => {
+      if (isSubscribed) {
+        console.warn('Authentication initialization timeout');
+        setIsInitializing(false);
+      }
+    }, 5000); // 5 ثوان timeout
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         if (isSubscribed) {
+          clearTimeout(initializationTimeout);
           handleAuthStateChange(event, session);
         }
       }
@@ -65,8 +76,18 @@ export const useAuthState = () => {
 
     const checkCurrentSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          if (isSubscribed) {
+            setIsInitializing(false);
+          }
+          return;
+        }
+
         if (isSubscribed) {
+          clearTimeout(initializationTimeout);
           await handleAuthStateChange('INITIAL_SESSION', session);
         }
       } catch (error) {
@@ -81,6 +102,7 @@ export const useAuthState = () => {
 
     return () => {
       isSubscribed = false;
+      clearTimeout(initializationTimeout);
       subscription.unsubscribe();
     };
   }, [handleAuthStateChange]);
