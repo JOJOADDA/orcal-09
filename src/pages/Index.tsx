@@ -1,16 +1,22 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 import { Profile } from '@/types/database';
 import AuthPage from '@/components/AuthPage';
 import ClientDashboard from '@/components/ClientDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
+import DesignerDashboard from '@/components/DesignerDashboard';
+import DesignerAuthDialog from '@/components/DesignerAuthDialog';
 import { supabase } from '@/integrations/supabase/client';
+import { Button } from '@/components/ui/button';
+import { Palette } from 'lucide-react';
 
 const Index = () => {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [designerUser, setDesignerUser] = useState<any>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isDesignerAuthenticated, setIsDesignerAuthenticated] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [showDesignerAuth, setShowDesignerAuth] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const maxRetries = 3;
 
@@ -134,6 +140,26 @@ const Index = () => {
     }
   }, []);
 
+  // Designer authentication handlers
+  const handleDesignerLogin = useCallback(async (designerData: { name: string; role: string; email: string }) => {
+    setDesignerUser(designerData);
+    setIsDesignerAuthenticated(true);
+    setShowDesignerAuth(false);
+  }, []);
+
+  const handleDesignerLogout = useCallback(async () => {
+    try {
+      await supabaseService.signOut();
+      setDesignerUser(null);
+      setIsDesignerAuthenticated(false);
+    } catch (error) {
+      console.error('Error during designer logout:', error);
+      // Force logout even if there's an error
+      setDesignerUser(null);
+      setIsDesignerAuthenticated(false);
+    }
+  }, []);
+
   // Loading state during initialization
   if (isInitializing) {
     return (
@@ -146,9 +172,40 @@ const Index = () => {
     );
   }
 
+  // Show designer dashboard if designer is authenticated
+  if (isDesignerAuthenticated && designerUser) {
+    return <DesignerDashboard user={designerUser} onLogout={handleDesignerLogout} />;
+  }
+
+  // Show designer auth dialog
+  if (showDesignerAuth) {
+    return (
+      <DesignerAuthDialog
+        onClose={() => setShowDesignerAuth(false)}
+        onDesignerLogin={handleDesignerLogin}
+      />
+    );
+  }
+
   // Render appropriate dashboard based on auth state and user role
   if (!isAuthenticated || !currentUser) {
-    return <AuthPage onAuthSuccess={handleAuthSuccess} />;
+    return (
+      <div className="relative">
+        <AuthPage onAuthSuccess={handleAuthSuccess} />
+        
+        {/* Designer Login Button */}
+        <div className="fixed bottom-6 right-6 z-50">
+          <Button
+            onClick={() => setShowDesignerAuth(true)}
+            className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-full p-4"
+            size="lg"
+          >
+            <Palette className="w-6 h-6 mr-2" />
+            دخول المصممين
+          </Button>
+        </div>
+      </div>
+    );
   }
 
   if (currentUser.role === 'admin') {

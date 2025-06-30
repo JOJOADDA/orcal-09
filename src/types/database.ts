@@ -1,10 +1,23 @@
-
 export interface Profile {
   id: string;
   name: string;
   phone: string;
   role: 'client' | 'admin';
   avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Designer {
+  id: string;
+  user_id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  specialization?: string;
+  experience_years: number;
+  portfolio_url?: string;
+  status: 'active' | 'inactive' | 'pending';
   created_at: string;
   updated_at: string;
 }

@@ -178,6 +178,48 @@ export type Database = {
           },
         ]
       }
+      designers: {
+        Row: {
+          created_at: string
+          email: string
+          experience_years: number | null
+          id: string
+          name: string
+          phone: string | null
+          portfolio_url: string | null
+          specialization: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          experience_years?: number | null
+          id?: string
+          name: string
+          phone?: string | null
+          portfolio_url?: string | null
+          specialization?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          experience_years?: number | null
+          id?: string
+          name?: string
+          phone?: string | null
+          portfolio_url?: string | null
+          specialization?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       message_files: {
         Row: {
           file_type: string
