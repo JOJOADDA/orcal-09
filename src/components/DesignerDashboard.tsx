@@ -21,25 +21,69 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // إنشاء معرف UUID صحيح للمصمم
-  const generateDesignerUUID = (name: string): string => {
-    // إنشاء معرف ثابت ومتسق للمصمم بناءً على الاسم
-    const nameHash = btoa(encodeURIComponent(name)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
-    return `00000000-0000-4000-8000-${nameHash.padEnd(12, '0')}`;
-  };
-
-  // إنشاء ملف تعريف للمصمم مع معرف UUID صحيح
-  const designerProfile = {
-    id: generateDesignerUUID(designerData.name),
-    name: designerData.name,
-    phone: '+249123456789',
-    role: 'designer' as const,
-    avatar_url: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  };
+  // إنشاء ملف تعريف موحد للمصمم مع UUID صحيح
+  const [designerProfile, setDesignerProfile] = useState<any>(null);
 
   useEffect(() => {
+    const initializeDesignerProfile = async () => {
+      try {
+        // استخدام دالة قاعدة البيانات لإنشاء UUID صحيح
+        const { data: designerUUID, error } = await supabase.rpc('generate_designer_uuid', {
+          designer_name: designerData.name
+        });
+
+        if (error) {
+          console.error('Error generating designer UUID:', error);
+          // Fallback method
+          const nameHash = btoa(encodeURIComponent(designerData.name)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+          const fallbackUUID = `00000000-0000-4000-8000-${nameHash.padEnd(12, '0')}`;
+          
+          setDesignerProfile({
+            id: fallbackUUID,
+            name: designerData.name,
+            phone: '+249123456789',
+            role: 'designer' as const,
+            avatar_url: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        } else {
+          setDesignerProfile({
+            id: designerUUID,
+            name: designerData.name,
+            phone: '+249123456789',
+            role: 'designer' as const,
+            avatar_url: null,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          });
+        }
+
+        console.log('Designer profile initialized:', { id: designerUUID || 'fallback', name: designerData.name });
+      } catch (error) {
+        console.error('Error initializing designer profile:', error);
+        // Final fallback
+        const nameHash = btoa(encodeURIComponent(designerData.name)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+        const fallbackUUID = `00000000-0000-4000-8000-${nameHash.padEnd(12, '0')}`;
+        
+        setDesignerProfile({
+          id: fallbackUUID,
+          name: designerData.name,
+          phone: '+249123456789',
+          role: 'designer' as const,
+          avatar_url: null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        });
+      }
+    };
+
+    initializeDesignerProfile();
+  }, [designerData.name]);
+
+  useEffect(() => {
+    if (!designerProfile) return;
+
     loadOrders();
     
     // الاشتراك في التحديثات الفورية للطلبات
@@ -60,8 +104,8 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
 
     // الاشتراك في الرسائل الجديدة من العملاء
     const unsubscribeMessages = realTimeSyncService.subscribeToAllMessages((message) => {
-      // إشعار المصمم بالرسائل الجديدة من العملاء
-      if (message.sender_role === 'client') {
+      // إشعار المصمم بالرسائل الجديدة من العملاء فقط
+      if (message.sender_role === 'client' && message.sender_id !== designerProfile.id) {
         const orderForMessage = orders.find(order => order.id === message.order_id);
         if (orderForMessage) {
           toast({
@@ -76,7 +120,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       if (unsubscribeOrders) unsubscribeOrders();
       if (unsubscribeMessages) unsubscribeMessages();
     };
-  }, [orders]);
+  }, [designerProfile, orders]);
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -97,6 +141,11 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   };
 
   const updateOrderStatus = async (orderId: string, status: DesignOrder['status']) => {
+    if (!designerProfile) {
+      console.error('Designer profile not initialized');
+      return;
+    }
+
     try {
       const result = await orderService.updateOrderStatus(orderId, status);
       if (result.error) {
@@ -143,6 +192,18 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       });
     }
   };
+
+  // لا نعرض شيء حتى يتم تهيئة ملف المصمم
+  if (!designerProfile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تهيئة لوحة التحكم...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (selectedOrderId) {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);

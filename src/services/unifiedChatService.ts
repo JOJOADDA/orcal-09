@@ -24,27 +24,44 @@ export class UnifiedChatService {
     return uuidRegex.test(uuid);
   }
 
-  // إنشاء UUID صحيح من نص
-  private generateUUIDFromString(text: string): string {
-    const hash = btoa(encodeURIComponent(text)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
-    return `00000000-0000-4000-8000-${hash.padEnd(12, '0')}`;
+  // إنشاء UUID صحيح من نص باستخدام دالة قاعدة البيانات
+  private async generateValidUUID(text: string): Promise<string> {
+    try {
+      const { data, error } = await supabase.rpc('generate_designer_uuid', { 
+        designer_name: text 
+      });
+      
+      if (error) {
+        console.warn('Failed to generate UUID from database, using fallback:', error);
+        // Fallback method
+        const hash = btoa(encodeURIComponent(text)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+        return `00000000-0000-4000-8000-${hash.padEnd(12, '0')}`;
+      }
+      
+      return data;
+    } catch (error) {
+      console.warn('Error generating UUID, using fallback:', error);
+      const hash = btoa(encodeURIComponent(text)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+      return `00000000-0000-4000-8000-${hash.padEnd(12, '0')}`;
+    }
   }
 
-  // إنشاء أو جلب غرفة الدردشة مع دعم المصممين المحسن
+  // إنشاء أو جلب غرفة الدردشة مع دعم محسن للمصممين
   async getOrCreateChatRoom(orderId: string, userId: string, userRole: string = 'client'): Promise<ChatRoom | null> {
     try {
       console.log('Getting/Creating chat room for order:', orderId, 'User:', userId, 'Role:', userRole);
       
-      // التحقق من صحة المعرفات
+      // التحقق من صحة معرف الطلب
       if (!this.isValidUUID(orderId)) {
         console.error('Invalid order ID format:', orderId);
         return null;
       }
 
+      // التأكد من صحة معرف المستخدم
       let validUserId = userId;
       if (!this.isValidUUID(userId)) {
         console.warn('Invalid user ID format, generating valid UUID:', userId);
-        validUserId = this.generateUUIDFromString(userId);
+        validUserId = await this.generateValidUUID(userId);
       }
 
       // محاولة جلب الغرفة الموجودة أولاً
@@ -52,14 +69,27 @@ export class UnifiedChatService {
         .from('chat_rooms')
         .select('*')
         .eq('order_id', orderId)
-        .single();
+        .maybeSingle();
 
       if (existingRoom && !fetchError) {
         console.log('Found existing chat room:', existingRoom.id);
+        
+        // تحديث admin_id إذا كان المستخدم مصمم/إدمن وليس موجود
+        if ((userRole === 'designer' || userRole === 'admin') && !existingRoom.admin_id) {
+          const { error: updateError } = await supabase
+            .from('chat_rooms')
+            .update({ admin_id: validUserId, updated_at: new Date().toISOString() })
+            .eq('id', existingRoom.id);
+            
+          if (!updateError) {
+            existingRoom.admin_id = validUserId;
+          }
+        }
+        
         return existingRoom as ChatRoom;
       }
 
-      // الحصول على معلومات الطلب لتحديد العميل
+      // الحصول على معلومات الطلب
       const { data: orderData, error: orderError } = await supabase
         .from('design_orders')
         .select('client_id')
@@ -140,7 +170,7 @@ export class UnifiedChatService {
     }
   }
 
-  // إرسال رسالة مع دعم كامل للمصممين المحسن
+  // إرسال رسالة مع دعم محسن للمصممين
   async sendMessage(messageData: {
     order_id: string;
     sender_id: string;
@@ -158,19 +188,20 @@ export class UnifiedChatService {
         sender_id: messageData.sender_id
       });
       
-      // التحقق من صحة المعرفات
+      // التحقق من صحة معرف الطلب
       if (!this.isValidUUID(messageData.order_id)) {
         console.error('Invalid order ID format:', messageData.order_id);
         return { success: false, error: 'Invalid order ID format' };
       }
 
+      // التأكد من صحة معرف المرسل
       let validSenderId = messageData.sender_id;
       if (!this.isValidUUID(messageData.sender_id)) {
         console.warn('Invalid sender ID format, generating valid UUID:', messageData.sender_id);
-        validSenderId = this.generateUUIDFromString(messageData.sender_id);
+        validSenderId = await this.generateValidUUID(messageData.sender_id);
       }
 
-      // التأكد من وجود غرفة الدردشة
+      // التأكد من وجود غرفة الدردشة وإنشاؤها إذا لم تكن موجودة
       const room = await this.getOrCreateChatRoom(
         messageData.order_id, 
         validSenderId, 
@@ -183,7 +214,7 @@ export class UnifiedChatService {
 
       console.log('Using chat room:', room.id, 'Sender ID:', validSenderId);
 
-      // إرسال الرسالة مباشرة
+      // إرسال الرسالة
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -222,7 +253,6 @@ export class UnifiedChatService {
         })
         .eq('id', room.id);
 
-      console.log('Message sent successfully with enhanced sync');
       return { success: true, message: data as ChatMessage };
     } catch (error) {
       console.error('Error in sendMessage:', error);
