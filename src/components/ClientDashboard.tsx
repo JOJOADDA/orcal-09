@@ -8,7 +8,7 @@ import { supabaseService } from '@/services/supabaseService';
 import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import ChatWindow from './ChatWindow';
-import DesignerLoginDialog from './DesignerLoginDialog';
+import DesignerAuthDialog from './DesignerAuthDialog';
 import DesignerDashboard from './DesignerDashboard';
 
 interface ClientDashboardProps {
@@ -21,7 +21,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showDesignerLogin, setShowDesignerLogin] = useState(false);
+  const [showDesignerAuth, setShowDesignerAuth] = useState(false);
   const [designerData, setDesignerData] = useState<{ name: string; role: string } | null>(null);
 
   useEffect(() => {
@@ -42,7 +42,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
 
   const handleDesignerLogin = (data: { name: string; role: string }) => {
     setDesignerData(data);
-    setShowDesignerLogin(false);
+    setShowDesignerAuth(false);
   };
 
   const handleDesignerLogout = () => {
@@ -137,7 +137,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
               طلب جديد
             </Button>
             <Button
-              onClick={() => setShowDesignerLogin(true)}
+              onClick={() => setShowDesignerAuth(true)}
               variant="outline"
               className="text-sm sm:text-base border-orange-300 text-orange-600 hover:bg-orange-50"
             >
@@ -237,9 +237,9 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
         />
       )}
 
-      {showDesignerLogin && (
-        <DesignerLoginDialog
-          onClose={() => setShowDesignerLogin(false)}
+      {showDesignerAuth && (
+        <DesignerAuthDialog
+          onClose={() => setShowDesignerAuth(false)}
           onDesignerLogin={handleDesignerLogin}
         />
       )}
