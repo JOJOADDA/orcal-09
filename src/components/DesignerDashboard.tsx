@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
 import ChatWindow from './chat/ChatWindow';
@@ -6,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { unifiedChatService } from '@/services/unifiedChatService';
 import { orderService } from '@/services/orders/orderService';
 import { realTimeSyncService } from '@/services/realTimeSync';
+import { supabase } from '@/integrations/supabase/client';
 import DesignerHeader from './designer/DesignerHeader';
 import DesignerStats from './designer/DesignerStats';
 import OrdersList from './designer/OrdersList';
