@@ -9,7 +9,6 @@ import { Palette, Lock, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const SECRET_CODE = '1987730';
-const DESIGNER_PASSWORD = 'designer123'; // كلمة المرور للمصممين
 
 interface DesignerAccessDialogProps {
   onClose: () => void;
@@ -18,19 +17,17 @@ interface DesignerAccessDialogProps {
 
 const DesignerAccessDialog = ({ onClose, onAccessGranted }: DesignerAccessDialogProps) => {
   const [code, setCode] = useState('');
-  const [password, setPassword] = useState('');
   const [showCode, setShowCode] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!code.trim() || !password.trim()) {
+    if (!code.trim()) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال الرقم السري وكلمة المرور",
+        description: "يرجى إدخال الرقم السري",
         variant: "destructive"
       });
       return;
@@ -41,7 +38,7 @@ const DesignerAccessDialog = ({ onClose, onAccessGranted }: DesignerAccessDialog
     // محاكاة تأخير بسيط للأمان
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    if (code.trim() === SECRET_CODE && password.trim() === DESIGNER_PASSWORD) {
+    if (code.trim() === SECRET_CODE) {
       toast({
         title: "تم الدخول بنجاح!",
         description: "مرحباً بك في لوحة تحكم المصممين"
@@ -49,12 +46,11 @@ const DesignerAccessDialog = ({ onClose, onAccessGranted }: DesignerAccessDialog
       onAccessGranted();
     } else {
       toast({
-        title: "بيانات خاطئة",
-        description: "يرجى التأكد من الرقم السري وكلمة المرور والمحاولة مرة أخرى",
+        title: "رقم سري خاطئ",
+        description: "يرجى التأكد من الرقم السري والمحاولة مرة أخرى",
         variant: "destructive"
       });
       setCode('');
-      setPassword('');
     }
     
     setIsLoading(false);
@@ -78,20 +74,20 @@ const DesignerAccessDialog = ({ onClose, onAccessGranted }: DesignerAccessDialog
               className="w-16 h-16 mx-auto object-contain mb-4"
             />
             <p className="text-gray-600 text-sm">
-              أدخل الرقم السري وكلمة المرور للوصول إلى لوحة تحكم المصممين
+              أدخل الرقم السري للوصول إلى لوحة تحكم المصممين
             </p>
           </div>
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg text-center">بيانات الدخول</CardTitle>
+              <CardTitle className="text-lg text-center">الرقم السري</CardTitle>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="secret-code" className="flex items-center gap-2">
                     <Lock className="w-4 h-4 text-orange-500" />
-                    الرقم السري
+                    أدخل الرقم السري
                   </Label>
                   <div className="relative">
                     <Input
@@ -114,34 +110,6 @@ const DesignerAccessDialog = ({ onClose, onAccessGranted }: DesignerAccessDialog
                       disabled={isLoading}
                     >
                       {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="flex items-center gap-2">
-                    <Lock className="w-4 h-4 text-purple-500" />
-                    كلمة المرور
-                  </Label>
-                  <div className="relative">
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="كلمة المرور"
-                      className="text-center"
-                      disabled={isLoading}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
-                      onClick={() => setShowPassword(!showPassword)}
-                      disabled={isLoading}
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </Button>
                   </div>
                 </div>

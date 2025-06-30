@@ -53,23 +53,15 @@ const Index = () => {
     initializeAuth();
   }, []);
 
-  const handleAuthSuccess = async () => {
-    try {
-      const session = await supabaseService.getCurrentSession();
-      if (session?.user) {
-        setUser(session.user);
-        const profile = await supabaseService.getProfile(session.user.id);
-        setUserProfile(profile);
-        setShowAuth(false);
-        
-        toast({
-          title: "تم تسجيل الدخول بنجاح!",
-          description: `مرحباً ${profile?.name || 'بك'}، يمكنك الآن إدارة المشاريع`
-        });
-      }
-    } catch (error) {
-      console.error('Auth success error:', error);
-    }
+  const handleLogin = async (userData: any) => {
+    setUser(userData.user);
+    setUserProfile(userData.profile);
+    setShowAuth(false);
+    
+    toast({
+      title: "تم تسجيل الدخول بنجاح!",
+      description: `مرحباً ${userData.profile?.name || 'بك'}، يمكنك الآن إدارة المشاريع`
+    });
   };
 
   const handleLogout = async () => {
@@ -115,7 +107,8 @@ const Index = () => {
   if (showAuth) {
     return (
       <AuthPage 
-        onAuthSuccess={handleAuthSuccess}
+        onClose={() => setShowAuth(false)}
+        onLogin={handleLogin}
       />
     );
   }
@@ -123,9 +116,9 @@ const Index = () => {
   // عرض لوحات التحكم للمستخدمين المسجلين
   if (user && userProfile) {
     if (userProfile.role === 'admin') {
-      return <AdminDashboard user={userProfile} onLogout={handleLogout} />;
+      return <AdminDashboard user={user} userProfile={userProfile} onLogout={handleLogout} />;
     } else {
-      return <ClientDashboard user={userProfile} onLogout={handleLogout} />;
+      return <ClientDashboard user={user} userProfile={userProfile} onLogout={handleLogout} />;
     }
   }
 
@@ -135,7 +128,7 @@ const Index = () => {
         onLoginClick={() => setShowAuth(true)}
         onDesignerClick={() => setShowDesignerAccess(true)}
       />
-      <HeroSection />
+      <HeroSection onGetStarted={() => setShowAuth(true)} />
       <ServicesSection />
       <PortfolioSection />
       <PricingSection />
