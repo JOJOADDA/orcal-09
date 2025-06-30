@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { ChatRoom, ChatMessage, DesignOrder, OrderFile, MessageFile } from '@/types/database';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -102,15 +103,27 @@ export class UnifiedChatService {
     files?: OrderFile[];
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
     try {
-      console.log('Sending message with enhanced sync:', messageData.content.substring(0, 50) + '...');
+      console.log('Sending message with enhanced sync:', {
+        content: messageData.content.substring(0, 50) + '...',
+        sender_role: messageData.sender_role,
+        sender_name: messageData.sender_name
+      });
       
+      // التأكد من وجود معرف المرسل
+      if (!messageData.sender_id || messageData.sender_id === 'system') {
+        // إنشاء معرف فريد للمصمم إذا لم يكن موجود
+        if (messageData.sender_role === 'designer') {
+          messageData.sender_id = `designer-${messageData.sender_name.replace(/\s+/g, '-')}`;
+        }
+      }
+
       // جلب أو إنشاء غرفة الدردشة
       const room = await this.getOrCreateChatRoom(messageData.order_id, messageData.sender_id);
       if (!room) {
         throw new Error('Failed to get or create chat room');
       }
 
-      // إرسال الرسالة
+      // إرسال الرسالة مباشرة إلى جدول chat_messages
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -131,6 +144,8 @@ export class UnifiedChatService {
         return { success: false, error };
       }
 
+      console.log('Message sent successfully:', data.id);
+
       // رفع الملفات إذا كانت موجودة
       if (messageData.files && messageData.files.length > 0) {
         for (const file of messageData.files) {
@@ -138,7 +153,7 @@ export class UnifiedChatService {
         }
       }
 
-      // تحديث غرفة الدردشة مع ضمان الإشعارات الفورية
+      // تحديث غرفة الدردشة
       await supabase
         .from('chat_rooms')
         .update({
@@ -255,10 +270,18 @@ export class UnifiedChatService {
           },
           (payload) => {
             console.log('Real-time message received with enhanced sync:', payload.new);
+            
+            if (!payload.new || typeof payload.new !== 'object') {
+              console.warn('Invalid message payload received:', payload);
+              return;
+            }
+
+            const messageData = payload.new as any;
+            
             const message = {
-              ...payload.new,
-              sender_role: payload.new.sender_role as 'client' | 'admin' | 'designer' | 'system',
-              message_type: payload.new.message_type as 'text' | 'file' | 'system'
+              ...messageData,
+              sender_role: (messageData.sender_role || 'client') as 'client' | 'admin' | 'designer' | 'system',
+              message_type: (messageData.message_type || 'text') as 'text' | 'file' | 'system'
             } as ChatMessage;
             
             callback(message);
