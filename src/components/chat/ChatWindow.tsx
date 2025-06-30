@@ -74,7 +74,7 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || isLoading) return;
 
     setIsLoading(true);
     
@@ -82,22 +82,39 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
       console.log('Sending message from user:', user.name, 'Role:', user.role, 'ID:', user.id);
       console.log('Message content:', newMessage);
       
+      // التأكد من أن دور المرسل صحيح - تحويل designer إلى admin للتوافق مع قاعدة البيانات
+      let senderRole: 'client' | 'admin' | 'designer' | 'system' = user.role as any;
+      
+      // إذا كان المستخدم مصمم، نستخدم دور admin في قاعدة البيانات
+      if (user.role === 'designer') {
+        senderRole = 'admin';
+      }
+      
+      console.log('Adjusted sender role for database:', senderRole);
+      
       const result = await unifiedChatService.sendMessage({
         order_id: order.id,
         sender_id: user.id,
         sender_name: user.name,
-        sender_role: user.role as 'client' | 'admin' | 'designer' | 'system',
+        sender_role: senderRole,
         content: newMessage,
         message_type: 'text'
       });
 
       if (!result.success) {
+        console.error('Failed to send message:', result.error);
         throw new Error(result.error?.message || 'فشل في إرسال الرسالة');
       }
 
       console.log('Message sent successfully');
       setNewMessage('');
       // سيتم إضافة الرسالة عبر الاشتراك الفوري
+      
+      toast({
+        title: "تم الإرسال",
+        description: "تم إرسال الرسالة بنجاح",
+      });
+      
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -249,7 +266,7 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
               <Button
                 type="submit"
                 disabled={!newMessage.trim() || isLoading}
-                className="h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl"
+                className="h-12 px-6 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoading ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
