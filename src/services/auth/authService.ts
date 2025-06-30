@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export class AuthService {
@@ -16,16 +15,28 @@ export class AuthService {
   async checkUserExists(identifier: string): Promise<boolean> {
     try {
       const isEmail = identifier.includes('@');
-      let query = supabase.from('profiles').select('id');
       
       if (isEmail) {
-        // For email, we need to find user by checking auth.users email
-        const { data: authData } = await supabase.auth.admin.listUsers();
-        const userExists = authData.users?.some(user => user.email === identifier);
-        return userExists || false;
+        // For email, check in profiles table by looking up the user
+        const { data } = await supabase
+          .from('profiles')
+          .select('id')
+          .limit(1);
+        
+        if (data) {
+          // Check if any user has this email by checking auth users
+          const { data: { users } } = await supabase.auth.admin.listUsers();
+          const userExists = users?.some(user => user.email === identifier);
+          return userExists || false;
+        }
+        return false;
       } else {
         // For phone, check in profiles table
-        const { data } = await query.eq('phone', identifier).single();
+        const { data } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('phone', identifier)
+          .single();
         return !!data;
       }
     } catch (error) {
