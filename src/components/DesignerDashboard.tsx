@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
 import ChatWindow from './chat/ChatWindow';
@@ -20,9 +21,16 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // إنشاء ملف تعريف للمصمم مع معرف ثابت
+  // إنشاء معرف UUID صحيح للمصمم
+  const generateDesignerUUID = (name: string): string => {
+    // إنشاء معرف ثابت ومتسق للمصمم بناءً على الاسم
+    const nameHash = btoa(encodeURIComponent(name)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    return `00000000-0000-4000-8000-${nameHash.padEnd(12, '0')}`;
+  };
+
+  // إنشاء ملف تعريف للمصمم مع معرف UUID صحيح
   const designerProfile = {
-    id: `designer-${designerData.name.replace(/\s+/g, '-').toLowerCase()}`,
+    id: generateDesignerUUID(designerData.name),
     name: designerData.name,
     phone: '+249123456789',
     role: 'designer' as const,
@@ -106,6 +114,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       };
 
       // إرسال إشعار للعميل من المصمم
+      console.log('Sending status update message with designer profile:', designerProfile);
       const messageResult = await unifiedChatService.sendMessage({
         order_id: orderId,
         sender_id: designerProfile.id,
@@ -134,12 +143,6 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       });
     }
   };
-
-  // الاشتراك في التحديثات الفورية للطلبات
-  
-
-  // الاشتراك في الرسائل الجديدة من العملاء
-  
 
   if (selectedOrderId) {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);

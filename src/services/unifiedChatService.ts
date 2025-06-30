@@ -18,11 +18,35 @@ export class UnifiedChatService {
     return error;
   }
 
-  // إنشاء أو جلب غرفة الدردشة مع دعم المصممين
+  // التحقق من صحة UUID
+  private isValidUUID(uuid: string): boolean {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return uuidRegex.test(uuid);
+  }
+
+  // إنشاء UUID صحيح من نص
+  private generateUUIDFromString(text: string): string {
+    const hash = btoa(encodeURIComponent(text)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
+    return `00000000-0000-4000-8000-${hash.padEnd(12, '0')}`;
+  }
+
+  // إنشاء أو جلب غرفة الدردشة مع دعم المصممين المحسن
   async getOrCreateChatRoom(orderId: string, userId: string, userRole: string = 'client'): Promise<ChatRoom | null> {
     try {
       console.log('Getting/Creating chat room for order:', orderId, 'User:', userId, 'Role:', userRole);
       
+      // التحقق من صحة المعرفات
+      if (!this.isValidUUID(orderId)) {
+        console.error('Invalid order ID format:', orderId);
+        return null;
+      }
+
+      let validUserId = userId;
+      if (!this.isValidUUID(userId)) {
+        console.warn('Invalid user ID format, generating valid UUID:', userId);
+        validUserId = this.generateUUIDFromString(userId);
+      }
+
       // محاولة جلب الغرفة الموجودة أولاً
       const { data: existingRoom, error: fetchError } = await supabase
         .from('chat_rooms')
@@ -35,31 +59,32 @@ export class UnifiedChatService {
         return existingRoom as ChatRoom;
       }
 
+      // الحصول على معلومات الطلب لتحديد العميل
+      const { data: orderData, error: orderError } = await supabase
+        .from('design_orders')
+        .select('client_id')
+        .eq('id', orderId)
+        .single();
+
+      if (orderError || !orderData) {
+        console.error('Error fetching order data:', orderError);
+        return null;
+      }
+
       // إنشاء غرفة جديدة
       const roomData: any = {
         order_id: orderId,
+        client_id: orderData.client_id,
         unread_count: 0,
         is_active: true
       };
 
-      // تحديد العميل والإدمن/المصمم بناءً على الدور
-      if (userRole === 'client') {
-        roomData.client_id = userId;
-        roomData.admin_id = null;
-      } else {
-        // للمصمم أو الإدمن
-        roomData.admin_id = userId;
-        // نحتاج لجلب معرف العميل من الطلب
-        const { data: orderData } = await supabase
-          .from('design_orders')
-          .select('client_id')
-          .eq('id', orderId)
-          .single();
-        
-        if (orderData) {
-          roomData.client_id = orderData.client_id;
-        }
+      // تحديد الإدمن/المصمم
+      if (userRole === 'designer' || userRole === 'admin') {
+        roomData.admin_id = validUserId;
       }
+
+      console.log('Creating chat room with data:', roomData);
 
       const { data: newRoom, error: createError } = await supabase
         .from('chat_rooms')
@@ -84,6 +109,11 @@ export class UnifiedChatService {
   async getMessages(orderId: string): Promise<ChatMessage[]> {
     try {
       console.log('Fetching messages for order:', orderId);
+      
+      if (!this.isValidUUID(orderId)) {
+        console.error('Invalid order ID format:', orderId);
+        return [];
+      }
       
       const { data, error } = await supabase
         .from('chat_messages')
@@ -110,7 +140,7 @@ export class UnifiedChatService {
     }
   }
 
-  // إرسال رسالة مع دعم كامل للمصممين
+  // إرسال رسالة مع دعم كامل للمصممين المحسن
   async sendMessage(messageData: {
     order_id: string;
     sender_id: string;
@@ -128,10 +158,22 @@ export class UnifiedChatService {
         sender_id: messageData.sender_id
       });
       
+      // التحقق من صحة المعرفات
+      if (!this.isValidUUID(messageData.order_id)) {
+        console.error('Invalid order ID format:', messageData.order_id);
+        return { success: false, error: 'Invalid order ID format' };
+      }
+
+      let validSenderId = messageData.sender_id;
+      if (!this.isValidUUID(messageData.sender_id)) {
+        console.warn('Invalid sender ID format, generating valid UUID:', messageData.sender_id);
+        validSenderId = this.generateUUIDFromString(messageData.sender_id);
+      }
+
       // التأكد من وجود غرفة الدردشة
       const room = await this.getOrCreateChatRoom(
         messageData.order_id, 
-        messageData.sender_id, 
+        validSenderId, 
         messageData.sender_role
       );
       
@@ -139,7 +181,7 @@ export class UnifiedChatService {
         throw new Error('Failed to get or create chat room');
       }
 
-      console.log('Using chat room:', room.id);
+      console.log('Using chat room:', room.id, 'Sender ID:', validSenderId);
 
       // إرسال الرسالة مباشرة
       const { data, error } = await supabase
@@ -147,7 +189,7 @@ export class UnifiedChatService {
         .insert({
           room_id: room.id,
           order_id: messageData.order_id,
-          sender_id: messageData.sender_id,
+          sender_id: validSenderId,
           sender_name: messageData.sender_name,
           sender_role: messageData.sender_role,
           content: messageData.content,
@@ -212,7 +254,6 @@ export class UnifiedChatService {
     }
   }
 
-  // رفع ملف جديد
   async uploadFile(file: File, orderId: string, uploaderId: string): Promise<OrderFile | null> {
     try {
       console.log('Uploading file:', file.name);
@@ -261,10 +302,15 @@ export class UnifiedChatService {
     return 'design';
   }
 
-  // الاشتراك في الرسائل الجديدة
+  // الاشتراك في الرسائل الجديدة مع معالجة محسنة للأخطاء
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void): (() => void) | null {
     try {
       console.log('Setting up real-time subscription for order:', orderId);
+      
+      if (!this.isValidUUID(orderId)) {
+        console.error('Invalid order ID format for subscription:', orderId);
+        return null;
+      }
       
       const channelName = `messages-${orderId}`;
       
