@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState } from 'react';
 import { Profile } from '@/types/database';
 import UnifiedChatWindow from './chat/UnifiedChatWindow';
 import { useToast } from '@/hooks/use-toast';
@@ -25,16 +26,13 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   });
 
   // Show error if exists
-  useEffect(() => {
-    if (error) {
-      console.error('Orders loading error:', error);
-      toast({
-        title: "خطأ",
-        description: error,
-        variant: "destructive"
-      });
-    }
-  }, [error, toast]);
+  if (error) {
+    toast({
+      title: "خطأ",
+      description: error,
+      variant: "destructive"
+    });
+  }
 
   const updateOrderStatus = async (orderId: string, status: 'pending' | 'in-progress' | 'completed' | 'delivered') => {
     try {
@@ -80,46 +78,16 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     }
   };
 
-  const handleOpenChat = (orderId: string) => {
-    console.log('Designer opening chat for order:', orderId);
-    console.log('Designer info:', { id: designerData.id, name: designerData.name, role: designerData.role });
-    
-    const selectedOrder = orders.find(order => order.id === orderId);
-    if (!selectedOrder) {
-      console.error('Order not found:', orderId);
-      toast({
-        title: "خطأ",
-        description: "لم يتم العثور على الطلب",
-        variant: "destructive"
-      });
-      return;
-    }
-    
-    console.log('Selected order:', selectedOrder);
-    setSelectedOrderId(orderId);
-  };
-
   if (selectedOrderId) {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
-      console.log('Rendering UnifiedChatWindow for designer with:', {
-        user: { id: designerData.id, name: designerData.name, role: designerData.role },
-        order: { id: selectedOrder.id, design_type: selectedOrder.design_type }
-      });
-      
       return (
         <UnifiedChatWindow
           user={designerData}
           order={selectedOrder}
-          onClose={() => {
-            console.log('Designer closing chat window');
-            setSelectedOrderId(null);
-          }}
+          onClose={() => setSelectedOrderId(null)}
         />
       );
-    } else {
-      console.error('Selected order not found, closing chat');
-      setSelectedOrderId(null);
     }
   }
 
@@ -136,7 +104,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
         <OrdersList 
           orders={orders}
           isLoading={isLoading}
-          onOpenChat={handleOpenChat}
+          onOpenChat={setSelectedOrderId}
           onUpdateStatus={updateOrderStatus}
         />
       </div>

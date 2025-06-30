@@ -11,15 +11,12 @@ interface UseRealtimeOrdersProps {
 
 export const useRealtimeOrders = ({ user, subscriptionId }: UseRealtimeOrdersProps) => {
   const [orders, setOrders] = useState<DesignOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Load initial orders
   const loadOrders = useCallback(async () => {
-    if (!user) {
-      setOrders([]);
-      return;
-    }
+    if (!user) return;
     
     setIsLoading(true);
     setError(null);
@@ -45,10 +42,7 @@ export const useRealtimeOrders = ({ user, subscriptionId }: UseRealtimeOrdersPro
 
   // Set up real-time subscription
   useEffect(() => {
-    if (!user) {
-      setOrders([]);
-      return;
-    }
+    if (!user) return;
 
     // Load initial data
     loadOrders();

@@ -1,6 +1,5 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquare } from 'lucide-react';
 import { DesignOrder } from '@/types/database';
 import OrderCard from './OrderCard';
@@ -23,10 +22,9 @@ const OrdersList = ({ orders, isLoading, onOpenChat, onUpdateStatus }: OrdersLis
       </CardHeader>
       <CardContent className="p-4 sm:p-6">
         {isLoading ? (
-          <div className="space-y-4">
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
-            <Skeleton className="h-20 w-full rounded-lg" />
+          <div className="text-center py-8 sm:py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500 mx-auto mb-4"></div>
+            <p className="text-gray-500 text-sm sm:text-base">جاري التحميل...</p>
           </div>
         ) : orders.length === 0 ? (
           <div className="text-center py-8 sm:py-12">

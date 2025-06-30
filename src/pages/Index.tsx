@@ -4,6 +4,7 @@ import ClientDashboard from '@/components/ClientDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
 import DesignerDashboard from '@/components/DesignerDashboard';
 import DesignerAuthDialog from '@/components/DesignerAuthDialog';
+import LoadingScreen from '@/components/LoadingScreen';
 import DesignerLoginButton from '@/components/DesignerLoginButton';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useDesignerAuth } from '@/hooks/useDesignerAuth';
@@ -27,6 +28,11 @@ const Index = () => {
     handleDesignerSignUp,
     handleDesignerLogout
   } = useDesignerAuth();
+
+  // Loading state during initialization
+  if (isInitializing || isDesignerLoading) {
+    return <LoadingScreen />;
+  }
 
   // Show designer dashboard if designer is authenticated
   if (isDesignerAuthenticated && designerUser) {

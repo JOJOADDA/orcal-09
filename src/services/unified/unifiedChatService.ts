@@ -16,8 +16,6 @@ interface SendMessageData {
 export class UnifiedChatService {
   async getOrCreateChatRoom(orderId: string, clientId: string): Promise<ChatRoom | null> {
     try {
-      console.log('Getting or creating chat room for order:', orderId);
-      
       // Try to get existing room
       const { data: existingRoom, error: fetchError } = await supabase
         .from('chat_rooms')
@@ -31,12 +29,10 @@ export class UnifiedChatService {
       }
 
       if (existingRoom) {
-        console.log('Found existing chat room:', existingRoom.id);
         return existingRoom as ChatRoom;
       }
 
       // Create new room if it doesn't exist
-      console.log('Creating new chat room for order:', orderId);
       const { data: newRoom, error: createError } = await supabase
         .from('chat_rooms')
         .insert({
@@ -54,7 +50,6 @@ export class UnifiedChatService {
         return null;
       }
 
-      console.log('Created new chat room:', newRoom.id);
       return newRoom as ChatRoom;
     } catch (error) {
       console.error('Error in getOrCreateChatRoom:', error);
@@ -77,7 +72,7 @@ export class UnifiedChatService {
         return [];
       }
 
-      console.log(`Fetched ${data?.length || 0} messages for order:`, orderId);
+      console.log(`Fetched ${data?.length || 0} messages`);
       return data as ChatMessage[];
     } catch (error) {
       console.error('Error getting messages:', error);
@@ -87,16 +82,13 @@ export class UnifiedChatService {
 
   async sendMessage(messageData: SendMessageData): Promise<{success: boolean, message?: ChatMessage, error?: any}> {
     try {
-      console.log('Sending message for order:', messageData.order_id);
+      console.log('Sending message:', messageData.content.substring(0, 50));
 
-      // Get or create chat room first
+      // Get or create chat room
       const room = await this.getOrCreateChatRoom(messageData.order_id, messageData.sender_id);
       if (!room) {
-        console.error('Failed to get or create chat room');
-        return { success: false, error: 'Failed to get or create chat room' };
+        throw new Error('Failed to get or create chat room');
       }
-
-      console.log('Using chat room:', room.id);
 
       // Insert message
       const { data: message, error: messageError } = await supabase
@@ -119,7 +111,6 @@ export class UnifiedChatService {
         return { success: false, error: messageError };
       }
 
-      console.log('Message sent successfully:', message.id);
       const chatMessage = message as ChatMessage;
 
       // Handle file uploads if any
@@ -127,18 +118,14 @@ export class UnifiedChatService {
         console.log(`Uploading ${messageData.files.length} files`);
         
         for (const file of messageData.files) {
-          try {
-            const fileUrl = await unifiedFileService.uploadFile(file, messageData.order_id, messageData.sender_id);
-            if (fileUrl) {
-              await unifiedFileService.createMessageFile(chatMessage.id, file, fileUrl);
-              console.log('File uploaded and linked to message:', file.name);
-            }
-          } catch (fileError) {
-            console.error('Error uploading file:', file.name, fileError);
+          const fileUrl = await unifiedFileService.uploadFile(file, messageData.order_id, messageData.sender_id);
+          if (fileUrl) {
+            await unifiedFileService.createMessageFile(chatMessage.id, file, fileUrl);
           }
         }
       }
 
+      console.log('Message sent successfully:', chatMessage.id);
       return { success: true, message: chatMessage };
     } catch (error) {
       console.error('Error in sendMessage:', error);
@@ -156,8 +143,6 @@ export class UnifiedChatService {
 
       if (error) {
         console.error('Error marking messages as read:', error);
-      } else {
-        console.log('Messages marked as read for order:', orderId);
       }
     } catch (error) {
       console.error('Error in markMessagesAsRead:', error);
