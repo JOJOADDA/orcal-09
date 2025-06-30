@@ -5,6 +5,7 @@ export class AuthService {
   private handleError(error: any, context: string) {
     console.error(`[${context}] Error:`, error);
     
+    // إرسال تفاصيل الخطأ للمطور
     if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
       // Send to error tracking service
     }
@@ -15,7 +16,7 @@ export class AuthService {
   async signUp(identifier: string, password: string, name: string, phone: string = '') {
     try {
       const isEmail = identifier.includes('@');
-      const email = isEmail ? identifier : `user${identifier.replace('+', '')}@orcal.app`;
+      const email = isEmail ? identifier : `user${identifier.replace(/[^0-9]/g, '')}@orcal.app`;
       
       console.log('SignUp attempt:', { email, name, phone: isEmail ? phone : identifier });
       
@@ -33,12 +34,21 @@ export class AuthService {
         }
       });
 
-      if (data.user && !error) {
-        console.log('Client signup successful for user:', data.user.id);
+      if (error) {
+        console.error('SignUp error:', error);
+        return { data: null, error };
       }
 
-      return { data, error };
+      if (data.user) {
+        console.log('Client signup successful for user:', data.user.id);
+        
+        // انتظار قصير للتأكد من إنشاء الملف الشخصي
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      return { data, error: null };
     } catch (error) {
+      console.error('SignUp exception:', error);
       return { data: null, error: this.handleError(error, 'SignUp') };
     }
   }
@@ -48,7 +58,7 @@ export class AuthService {
       let email = identifier;
       
       if (type === 'phone') {
-        email = `user${identifier.replace('+', '')}@orcal.app`;
+        email = `user${identifier.replace(/[^0-9]/g, '')}@orcal.app`;
       }
 
       console.log('SignIn attempt:', { email, type });
@@ -58,12 +68,38 @@ export class AuthService {
         password
       });
 
-      if (data.user && !error) {
-        console.log('SignIn successful for user:', data.user.id);
+      if (error) {
+        console.error('SignIn error:', error);
+        return { data: null, error };
       }
 
-      return { data, error };
+      if (data.user) {
+        console.log('SignIn successful for user:', data.user.id);
+        
+        // التحقق من وجود الملف الشخصي وإنشاؤه إذا لم يكن موجوداً
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', data.user.id)
+          .single();
+
+        if (!profile) {
+          console.log('Creating missing profile for user:', data.user.id);
+          const userData = data.user.user_metadata || {};
+          await supabase
+            .from('profiles')
+            .insert({
+              id: data.user.id,
+              name: userData.name || 'مستخدم جديد',
+              phone: userData.phone || '',
+              role: userData.role || 'client'
+            });
+        }
+      }
+
+      return { data, error: null };
     } catch (error) {
+      console.error('SignIn exception:', error);
       return { data: null, error: this.handleError(error, 'SignIn') };
     }
   }
@@ -72,17 +108,30 @@ export class AuthService {
     try {
       console.log('SignOut attempt');
       const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        console.error('SignOut error:', error);
+      }
+      
       return { error };
     } catch (error) {
+      console.error('SignOut exception:', error);
       return { error: this.handleError(error, 'SignOut') };
     }
   }
 
   async getCurrentUser() {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error } = await supabase.auth.getUser();
+      
+      if (error) {
+        console.error('Get current user error:', error);
+        return null;
+      }
+      
       return user;
     } catch (error) {
+      console.error('Get current user exception:', error);
       this.handleError(error, 'Get Current User');
       return null;
     }
@@ -90,9 +139,16 @@ export class AuthService {
 
   async getCurrentSession() {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error) {
+        console.error('Get current session error:', error);
+        return null;
+      }
+      
       return session;
     } catch (error) {
+      console.error('Get current session exception:', error);
       this.handleError(error, 'Get Current Session');
       return null;
     }
@@ -107,8 +163,14 @@ export class AuthService {
           emailRedirectTo: `${window.location.origin}/`
         }
       });
+      
+      if (error) {
+        console.error('Resend confirmation error:', error);
+      }
+      
       return { error };
     } catch (error) {
+      console.error('Resend confirmation exception:', error);
       return { error: this.handleError(error, 'Resend Confirmation') };
     }
   }

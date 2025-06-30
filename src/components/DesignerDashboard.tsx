@@ -1,17 +1,17 @@
 
 import { useState } from 'react';
 import { Profile } from '@/types/database';
-import ChatWindow from './chat/ChatWindow';
+import UnifiedChatWindow from './chat/UnifiedChatWindow';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
-import { unifiedChatService } from '@/services/unifiedChatService';
+import { unifiedChatService } from '@/services/unified/unifiedChatService';
 import { orderService } from '@/services/orders/orderService';
 import DesignerHeader from './designer/DesignerHeader';
 import DesignerStats from './designer/DesignerStats';
 import OrdersList from './designer/OrdersList';
 
 interface DesignerDashboardProps {
-  designerData: Profile; // Now using real Profile instead of temp data
+  designerData: Profile;
   onLogout: () => void;
 }
 
@@ -56,7 +56,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
         order_id: orderId,
         sender_id: designerData.id,
         sender_name: designerData.name,
-        sender_role: 'designer',
+        sender_role: 'admin',
         content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
         message_type: 'system'
       });
@@ -82,7 +82,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
       return (
-        <ChatWindow
+        <UnifiedChatWindow
           user={designerData}
           order={selectedOrder}
           onClose={() => setSelectedOrderId(null)}

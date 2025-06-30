@@ -8,84 +8,100 @@ export const useAuthState = () => {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isInitializing, setIsInitializing] = useState(true);
-  const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 3;
 
-  // Memoized callback for handling auth state changes
   const handleAuthStateChange = useCallback(async (event: string, session: any) => {
     console.log('Auth state changed:', event, session?.user?.id);
     
-    if (session?.user) {
-      try {
-        const profile = await supabaseService.getProfile(session.user.id);
+    try {
+      if (session?.user) {
+        // محاولة الحصول على الملف الشخصي
+        let profile = await supabaseService.getProfile(session.user.id);
+        
+        // إذا لم يكن هناك profile، انتظر قليلاً ثم حاول مرة أخرى
+        if (!profile) {
+          console.log('Profile not found, waiting and retrying...');
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          profile = await supabaseService.getProfile(session.user.id);
+        }
+        
+        // إذا لم يزل غير موجود، قم بإنشاء واحد
+        if (!profile) {
+          console.log('Creating profile for user:', session.user.id);
+          const userData = session.user.user_metadata || {};
+          const { data: newProfile } = await supabaseService.createProfile(
+            session.user.id,
+            userData.name || 'مستخدم جديد',
+            session.user.email || '',
+            userData.phone || '',
+            userData.role || 'client'
+          );
+          profile = newProfile;
+        }
+        
         if (profile) {
           setCurrentUser(profile);
           setIsAuthenticated(true);
-          setRetryCount(0); // Reset retry count on success
+          console.log('User authenticated successfully:', profile.name);
         } else {
-          console.warn('Profile not found for user:', session.user.id);
+          console.error('Failed to get or create user profile');
           setCurrentUser(null);
           setIsAuthenticated(false);
         }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        
-        // Retry logic for profile fetching
-        if (retryCount < maxRetries) {
-          setRetryCount(prev => prev + 1);
-          setTimeout(() => {
-            handleAuthStateChange(event, session);
-          }, 1000 * (retryCount + 1)); // Exponential backoff
-        } else {
-          setCurrentUser(null);
-          setIsAuthenticated(false);
-        }
+      } else {
+        console.log('No session found, user not authenticated');
+        setCurrentUser(null);
+        setIsAuthenticated(false);
       }
-    } else {
+    } catch (error) {
+      console.error('Error in auth state change:', error);
       setCurrentUser(null);
       setIsAuthenticated(false);
-      setRetryCount(0);
+    } finally {
+      setIsInitializing(false);
     }
-    
-    setIsInitializing(false);
-  }, [retryCount, maxRetries]);
+  }, []);
 
-  // Initial setup and auth listener
   useEffect(() => {
-    let isSubscribed = true;
+    let isMounted = true;
 
-    // Set up auth state listener
+    // إعداد مهلة زمنية للتأكد من عدم التعليق
+    const initTimeout = setTimeout(() => {
+      if (isMounted) {
+        console.warn('Authentication initialization timeout');
+        setIsInitializing(false);
+      }
+    }, 8000);
+
+    // الاستماع لتغييرات حالة المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (isSubscribed) {
+        if (isMounted) {
+          clearTimeout(initTimeout);
           handleAuthStateChange(event, session);
         }
       }
     );
 
-    // Check for existing session with timeout
+    // التحقق من الجلسة الحالية
     const checkCurrentSession = async () => {
       try {
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Session check timeout')), 5000)
-        );
+        const { data: { session }, error } = await supabase.auth.getSession();
         
-        const sessionPromise = supabaseService.getCurrentSession();
-        
-        const session = await Promise.race([sessionPromise, timeoutPromise]) as any;
-        
-        if (isSubscribed && session?.user) {
-          const profile = await supabaseService.getProfile(session.user.id);
-          if (profile) {
-            setCurrentUser(profile);
-            setIsAuthenticated(true);
+        if (error) {
+          console.error('Error getting session:', error);
+          if (isMounted) {
+            setIsInitializing(false);
           }
+          return;
+        }
+
+        if (isMounted) {
+          clearTimeout(initTimeout);
+          await handleAuthStateChange('INITIAL_SESSION', session);
         }
       } catch (error) {
         console.error('Error checking session:', error);
-        // Continue without session if there's an error
-      } finally {
-        if (isSubscribed) {
+        if (isMounted) {
           setIsInitializing(false);
         }
       }
@@ -93,39 +109,33 @@ export const useAuthState = () => {
 
     checkCurrentSession();
 
-    // Cleanup function
     return () => {
-      isSubscribed = false;
+      isMounted = false;
+      clearTimeout(initTimeout);
       subscription.unsubscribe();
     };
   }, [handleAuthStateChange]);
 
-  // Optimized auth success handler
   const handleAuthSuccess = useCallback(async () => {
     try {
-      const session = await supabaseService.getCurrentSession();
-      if (session?.user) {
-        const profile = await supabaseService.getProfile(session.user.id);
-        if (profile) {
-          setCurrentUser(profile);
-          setIsAuthenticated(true);
-        }
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await handleAuthStateChange('AUTH_SUCCESS', session);
       }
     } catch (error) {
       console.error('Error in auth success handler:', error);
     }
-  }, []);
+  }, [handleAuthStateChange]);
 
-  // Optimized logout handler
   const handleLogout = useCallback(async () => {
     try {
       await supabaseService.signOut();
       setCurrentUser(null);
       setIsAuthenticated(false);
       supabaseService.clearAllCache();
+      console.log('User logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
-      // Force logout even if there's an error
       setCurrentUser(null);
       setIsAuthenticated(false);
     }

@@ -4,10 +4,11 @@ import ClientDashboard from '@/components/ClientDashboard';
 import AdminDashboard from '@/components/AdminDashboard';
 import DesignerDashboard from '@/components/DesignerDashboard';
 import DesignerAuthDialog from '@/components/DesignerAuthDialog';
-import LoadingScreen from '@/components/LoadingScreen';
 import DesignerLoginButton from '@/components/DesignerLoginButton';
 import { useAuthState } from '@/hooks/useAuthState';
 import { useDesignerAuth } from '@/hooks/useDesignerAuth';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useEffect, useState } from 'react';
 
 const Index = () => {
   const {
@@ -29,12 +30,42 @@ const Index = () => {
     handleDesignerLogout
   } = useDesignerAuth();
 
-  // Loading state during initialization
-  if (isInitializing || isDesignerLoading) {
-    return <LoadingScreen />;
+  const [forceRender, setForceRender] = useState(false);
+
+  // Force render after a timeout to prevent infinite loading
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (isInitializing) {
+        console.warn('Forcing render due to initialization timeout');
+        setForceRender(true);
+      }
+    }, 3000);
+
+    return () => clearTimeout(timeout);
+  }, [isInitializing]);
+
+  // Show loading skeleton only during initial authentication check and not forced
+  if (isInitializing && !forceRender) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
+        <div className="w-full max-w-md space-y-4">
+          <div className="text-center">
+            <Skeleton className="w-24 h-24 mx-auto mb-4 rounded-full" />
+            <Skeleton className="h-8 w-48 mx-auto mb-2" />
+            <Skeleton className="h-4 w-32 mx-auto" />
+          </div>
+          <div className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-lg p-6 space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
-  // Show designer dashboard if designer is authenticated
+  // Show designer dashboard immediately if designer is authenticated
   if (isDesignerAuthenticated && designerUser) {
     return <DesignerDashboard designerData={designerUser} onLogout={handleDesignerLogout} />;
   }
