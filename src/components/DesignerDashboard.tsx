@@ -1,48 +1,67 @@
 
-import { useState } from 'react';
-import { Profile } from '@/types/database';
-import UnifiedChatWindow from './chat/UnifiedChatWindow';
+import { useState, useEffect } from 'react';
+import { DesignOrder } from '@/types/database';
+import ChatWindow from './chat/ChatWindow';
 import { useToast } from '@/hooks/use-toast';
-import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
-import { unifiedChatService } from '@/services/unified/unifiedChatService';
+import { unifiedChatService } from '@/services/unifiedChatService';
 import { orderService } from '@/services/orders/orderService';
 import DesignerHeader from './designer/DesignerHeader';
 import DesignerStats from './designer/DesignerStats';
 import OrdersList from './designer/OrdersList';
 
 interface DesignerDashboardProps {
-  designerData: Profile;
+  designerData: { name: string; role: string };
   onLogout: () => void;
 }
 
 const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) => {
+  const [orders, setOrders] = useState<DesignOrder[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // Use real-time orders hook
-  const { orders, isLoading, error, refetch } = useRealtimeOrders({
-    user: designerData,
-    subscriptionId: `designer-${designerData.id}`
-  });
+  // إنشاء ملف تعريف مؤقت للمصمم
+  const designerProfile = {
+    id: `designer-${designerData.name.replace(/\s+/g, '-')}`,
+    name: designerData.name,
+    phone: '+249123456789',
+    role: 'designer' as const,
+    avatar_url: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  };
 
-  // Show error if exists
-  if (error) {
-    toast({
-      title: "خطأ",
-      description: error,
-      variant: "destructive"
-    });
-  }
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
-  const updateOrderStatus = async (orderId: string, status: 'pending' | 'in-progress' | 'completed' | 'delivered') => {
+  const loadOrders = async () => {
+    setIsLoading(true);
+    try {
+      const allOrders = await orderService.getAllOrders();
+      console.log('Loaded orders:', allOrders.length);
+      setOrders(allOrders);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل الطلبات",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateOrderStatus = async (orderId: string, status: DesignOrder['status']) => {
     try {
       const result = await orderService.updateOrderStatus(orderId, status);
       if (result.error) {
         throw result.error;
       }
 
-      // Send system message to client about status update
-      const getStatusText = (status: 'pending' | 'in-progress' | 'completed' | 'delivered') => {
+      // إرسال رسالة نظام للعميل
+      const getStatusText = (status: DesignOrder['status']) => {
         const statusMap = {
           'pending': 'قيد الانتظار',
           'in-progress': 'جاري التنفيذ',
@@ -54,19 +73,17 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
 
       await unifiedChatService.sendMessage({
         order_id: orderId,
-        sender_id: designerData.id,
-        sender_name: designerData.name,
-        sender_role: 'admin',
+        sender_id: 'system',
+        sender_name: 'النظام',
+        sender_role: 'system',
         content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
         message_type: 'system'
       });
 
-      // Refetch orders to get latest data
-      refetch();
-      
+      await loadOrders();
       toast({
         title: "تم التحديث",
-        description: "تم تحديث حالة الطلب بنجاح وإشعار العميل"
+        description: "تم تحديث حالة الطلب بنجاح"
       });
     } catch (error) {
       console.error('Error updating order status:', error);
@@ -82,8 +99,8 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
       return (
-        <UnifiedChatWindow
-          user={designerData}
+        <ChatWindow
+          user={designerProfile}
           order={selectedOrder}
           onClose={() => setSelectedOrderId(null)}
         />

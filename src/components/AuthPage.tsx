@@ -1,11 +1,10 @@
-
 import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Lock, Eye, EyeOff, Phone, Mail, CheckCircle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Phone, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -27,6 +26,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   });
   const { toast } = useToast();
 
+  // Memoized validation functions
   const validateEmail = useCallback((email: string) => /\S+@\S+\.\S+/.test(email), []);
   const validatePhone = useCallback((phone: string) => /^\+249[0-9]{9}$/.test(phone), []);
 
@@ -45,6 +45,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     return cleaned;
   }, []);
 
+  // Memoized form validation
   const loginValidation = useMemo(() => {
     const identifierType = detectIdentifierType(loginData.identifier);
     
@@ -88,74 +89,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     };
   }, [signupData, detectIdentifierType, validateEmail, validatePhone, formatPhoneNumber]);
 
-  const handleLogin = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!loginValidation.isValid) {
-      toast({
-        title: "خطأ في البيانات",
-        description: loginValidation.error,
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const identifierType = detectIdentifierType(loginData.identifier);
-    const identifier = identifierType === 'email' ? 
-      loginData.identifier : 
-      formatPhoneNumber(loginData.identifier);
-
-    setIsLoading(true);
-    
-    try {
-      console.log('Starting login process...');
-      
-      const { data, error } = await supabaseService.signIn(identifier, loginData.password, identifierType);
-      
-      if (error) {
-        console.error('Login error:', error);
-        let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
-        
-        if (error.message?.includes('Email not confirmed')) {
-          errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً. تحقق من صندوق الوارد الخاص بك.";
-        } else if (error.message?.includes('Invalid login credentials')) {
-          errorMessage = identifierType === 'email' 
-            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-            : "رقم الهاتف أو كلمة المرور غير صحيحة";
-        } else if (error.message?.includes('Too many requests')) {
-          errorMessage = "تم إرسال طلبات كثيرة. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.";
-        }
-        
-        toast({
-          title: "خطأ في تسجيل الدخول",
-          description: errorMessage,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (data?.user) {
-        console.log('Login successful:', data.user.id);
-        toast({
-          title: "تم تسجيل الدخول بنجاح!",
-          description: "مرحباً بك في أوركال للدعاية والإعلان"
-        });
-        
-        // تنفيذ onAuthSuccess فوراً بدون انتظار
-        onAuthSuccess();
-      }
-    } catch (error: any) {
-      console.error('Login exception:', error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loginData, loginValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
-
+  // Optimized signup handler with better error handling
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -175,10 +109,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       formatPhoneNumber(signupData.identifier);
 
     setIsLoading(true);
-    
     try {
-      console.log('Starting signup process...');
-      
       const { data, error } = await supabaseService.signUp(
         identifier,
         signupData.password,
@@ -187,20 +118,20 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       );
 
       if (error) {
-        console.error('Signup error:', error);
         let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
         
-        if (error.message?.includes('User already registered') || 
-            error.message?.includes('already exists')) {
+        if (error.message.includes('User already registered') || 
+            error.message.includes('already exists')) {
           errorMessage = "هذا الحساب مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من ذلك.";
-        } else if (error.message?.includes('Password should be at least 6 characters')) {
+        } else if (error.message.includes('Password should be at least 6 characters')) {
           errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
-        } else if (error.message?.includes('Invalid email')) {
+        } else if (error.message.includes('Invalid email')) {
           errorMessage = "البريد الإلكتروني غير صحيح";
-        } else if (error.message?.includes('duplicate key')) {
+        } else if (error.message.includes('duplicate key')) {
           errorMessage = "هذا البريد الإلكتروني مستخدم مسبقاً";
         }
         
+        console.error('Signup error details:', error);
         toast({
           title: "فشل التسجيل",
           description: errorMessage,
@@ -209,8 +140,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         return;
       }
 
-      if (data?.user) {
-        console.log('Signup successful:', data.user.id);
+      if (data.user) {
         if (identifierType === 'email') {
           setEmailSent(true);
           toast({
@@ -222,11 +152,11 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
             title: "تم إنشاء الحساب بنجاح!",
             description: "مرحباً بك في أوركال للدعاية والإعلان"
           });
-          onAuthSuccess();
+          setTimeout(() => onAuthSuccess(), 1000);
         }
       }
-    } catch (error: any) {
-      console.error('Signup exception:', error);
+    } catch (error) {
+      console.error('Signup error:', error);
       toast({ 
         title: "خطأ", 
         description: "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.", 
@@ -236,6 +166,68 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       setIsLoading(false);
     }
   }, [signupData, signupValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
+
+  // Optimized login handler
+  const handleLogin = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!loginValidation.isValid) {
+      toast({
+        title: "خطأ في البيانات",
+        description: loginValidation.error,
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const identifierType = detectIdentifierType(loginData.identifier);
+    const identifier = identifierType === 'email' ? 
+      loginData.identifier : 
+      formatPhoneNumber(loginData.identifier);
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabaseService.signIn(identifier, loginData.password, identifierType);
+      
+      if (error) {
+        let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
+        
+        if (error.message.includes('Email not confirmed')) {
+          errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً. تحقق من صندوق الوارد الخاص بك.";
+        } else if (error.message.includes('Invalid login credentials')) {
+          errorMessage = identifierType === 'email' 
+            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+            : "رقم الهاتف أو كلمة المرور غير صحيحة";
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = "تم إرسال طلبات كثيرة. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.";
+        }
+        
+        toast({
+          title: "خطأ في تسجيل الدخول",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data.user) {
+        toast({
+          title: "تم تسجيل الدخول بنجاح!",
+          description: "مرحباً بك في أوركال للدعاية والإعلان"
+        });
+        onAuthSuccess();
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء تسجيل الدخول",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loginData, loginValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
 
   const resendConfirmation = useCallback(async () => {
     if (signupData.identifier && validateEmail(signupData.identifier)) {
@@ -358,7 +350,6 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
             <TabsContent value="signup">
               <form onSubmit={handleSignup} className="space-y-4">
-                
                 <div className="space-y-2">
                   <Label htmlFor="signup-name" className="flex items-center gap-2">
                     <User className="w-4 h-4" />
