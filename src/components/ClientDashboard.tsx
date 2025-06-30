@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { supabaseService } from '@/services/supabaseService';
 import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import ChatWindow from './ChatWindow';
+import DesignerLoginDialog from './DesignerLoginDialog';
 
 interface ClientDashboardProps {
   user: Profile;
@@ -19,6 +19,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   const [showCreateOrder, setShowCreateOrder] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showDesignerLogin, setShowDesignerLogin] = useState(false);
 
   useEffect(() => {
     loadOrders();
@@ -96,7 +97,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-white/80 backdrop-blur-sm rounded-xl p-4 sm:p-6 shadow-lg gap-4 sm:gap-0">
           <div className="flex items-center gap-3 sm:gap-4">
             <img 
-              src="/lovable-uploads/65aa4b7b-e60a-4160-bf45-4c057f62c70a.png" 
+              src="/lovable-uploads/b49e08ca-b8a4-4464-9301-2cac70b76214.png" 
               alt="أوركال" 
               className="w-10 h-10 sm:w-12 sm:h-12 object-contain"
             />
@@ -112,6 +113,13 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
             >
               <Plus className="w-4 h-4 ml-2" />
               طلب جديد
+            </Button>
+            <Button
+              onClick={() => setShowDesignerLogin(true)}
+              variant="outline"
+              className="text-sm sm:text-base border-orange-300 text-orange-600 hover:bg-orange-50"
+            >
+              دخول المصممين
             </Button>
             <Button variant="outline" onClick={onLogout} className="text-sm sm:text-base">
               تسجيل الخروج
@@ -204,6 +212,17 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
           user={user}
           onClose={() => setShowCreateOrder(false)}
           onOrderCreated={handleOrderCreated}
+        />
+      )}
+
+      {/* Designer Login Dialog */}
+      {showDesignerLogin && (
+        <DesignerLoginDialog
+          onClose={() => setShowDesignerLogin(false)}
+          onDesignerLogin={(designerData) => {
+            console.log('Designer logged in:', designerData);
+            setShowDesignerLogin(false);
+          }}
         />
       )}
     </div>

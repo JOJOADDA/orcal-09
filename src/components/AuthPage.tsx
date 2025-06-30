@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -217,7 +216,6 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     }
   };
 
-  // دالة لإعادة إرسال رسالة التأكيد
   const resendConfirmation = async () => {
     if (signupData.identifier && validateEmail(signupData.identifier)) {
       setIsLoading(true);
@@ -242,7 +240,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="text-center space-y-4">
           <img 
-            src="/lovable-uploads/8055916a-7d46-495d-9a13-7790805c3b44.png" 
+            src="/lovable-uploads/b49e08ca-b8a4-4464-9301-2cac70b76214.png" 
             alt="أوركال للدعاية والإعلان" 
             className="w-20 h-20 mx-auto object-contain"
           />
