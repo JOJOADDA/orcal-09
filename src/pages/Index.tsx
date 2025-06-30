@@ -71,10 +71,8 @@ const Index = () => {
     setIsAuthenticated(false);
   };
 
-  if (isLoading) {
-    // لا شيء أثناء التحميل
-    return null;
-  }
+  // ✅ إلغاء شاشة التحميل بالكامل بدون كسر المنطق
+  if (isLoading) return null;
 
   if (!isAuthenticated || !currentUser) {
     return <AuthPage onAuthSuccess={handleAuthSuccess} />;
