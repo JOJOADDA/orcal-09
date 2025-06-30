@@ -12,6 +12,28 @@ export class AuthService {
     return error;
   }
 
+  // Check if user exists in profiles table
+  async checkUserExists(identifier: string): Promise<boolean> {
+    try {
+      const isEmail = identifier.includes('@');
+      let query = supabase.from('profiles').select('id');
+      
+      if (isEmail) {
+        // For email, we need to find user by checking auth.users email
+        const { data: authData } = await supabase.auth.admin.listUsers();
+        const userExists = authData.users?.some(user => user.email === identifier);
+        return userExists || false;
+      } else {
+        // For phone, check in profiles table
+        const { data } = await query.eq('phone', identifier).single();
+        return !!data;
+      }
+    } catch (error) {
+      console.error('Error checking user existence:', error);
+      return false;
+    }
+  }
+
   async signUp(identifier: string, password: string, name: string, phone: string = '') {
     try {
       const isEmail = identifier.includes('@');
@@ -19,6 +41,15 @@ export class AuthService {
       
       console.log('SignUp attempt:', { email, name, phone: isEmail ? phone : identifier });
       
+      // Check if user already exists
+      const userExists = await this.checkUserExists(identifier);
+      
+      if (userExists) {
+        // If user exists, try to sign them in instead
+        console.log('User already exists, attempting sign in...');
+        return this.signIn(identifier, password, isEmail ? 'email' : 'phone');
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,

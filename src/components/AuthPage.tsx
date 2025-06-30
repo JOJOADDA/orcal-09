@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Lock, Eye, EyeOff, Phone, Mail, AlertCircle, CheckCircle } from 'lucide-react';
-import { supabaseService } from '@/services/supabaseService';
+import { authService } from '@/services/auth/authService';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
@@ -89,7 +90,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     };
   }, [signupData, detectIdentifierType, validateEmail, validatePhone, formatPhoneNumber]);
 
-  // Optimized signup handler with better error handling
+  // Optimized signup handler with database check
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -110,7 +111,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabaseService.signUp(
+      const { data, error } = await authService.signUp(
         identifier,
         signupData.password,
         signupData.name,
@@ -120,15 +121,15 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       if (error) {
         let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
         
-        if (error.message.includes('User already registered') || 
+        if (error.message.includes('Invalid login credentials')) {
+          errorMessage = "المستخدم موجود مسبقاً ولكن كلمة المرور غير صحيحة";
+        } else if (error.message.includes('User already registered') || 
             error.message.includes('already exists')) {
-          errorMessage = "هذا الحساب مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من ذلك.";
+          errorMessage = "هذا الحساب مسجل مسبقاً. تم تسجيل الدخول تلقائياً.";
         } else if (error.message.includes('Password should be at least 6 characters')) {
           errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
         } else if (error.message.includes('Invalid email')) {
           errorMessage = "البريد الإلكتروني غير صحيح";
-        } else if (error.message.includes('duplicate key')) {
-          errorMessage = "هذا البريد الإلكتروني مستخدم مسبقاً";
         }
         
         console.error('Signup error details:', error);
@@ -141,19 +142,11 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       }
 
       if (data.user) {
-        if (identifierType === 'email') {
-          setEmailSent(true);
-          toast({
-            title: "تم إرسال رسالة التأكيد!",
-            description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب لتسجيل الدخول"
-          });
-        } else {
-          toast({
-            title: "تم إنشاء الحساب بنجاح!",
-            description: "مرحباً بك في أوركال للدعاية والإعلان"
-          });
-          setTimeout(() => onAuthSuccess(), 1000);
-        }
+        toast({
+          title: "تم بنجاح!",
+          description: "مرحباً بك في أوركال للدعاية والإعلان"
+        });
+        setTimeout(() => onAuthSuccess(), 1000);
       }
     } catch (error) {
       console.error('Signup error:', error);
@@ -187,7 +180,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabaseService.signIn(identifier, loginData.password, identifierType);
+      const { data, error } = await authService.signIn(identifier, loginData.password, identifierType);
       
       if (error) {
         let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
@@ -233,7 +226,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     if (signupData.identifier && validateEmail(signupData.identifier)) {
       setIsLoading(true);
       try {
-        const { error } = await supabaseService.resendConfirmation(signupData.identifier);
+        const { error } = await authService.resendConfirmation(signupData.identifier);
         if (!error) {
           toast({
             title: "تم إرسال رسالة التأكيد!",
