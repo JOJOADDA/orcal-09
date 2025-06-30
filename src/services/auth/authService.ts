@@ -17,19 +17,16 @@ export class AuthService {
       const isEmail = identifier.includes('@');
       
       if (isEmail) {
-        // For email, check in profiles table by looking up the user
-        const { data } = await supabase
-          .from('profiles')
-          .select('id')
-          .limit(1);
+        // For email, check if any user has this email by checking auth users
+        const { data: authResponse, error } = await supabase.auth.admin.listUsers();
         
-        if (data) {
-          // Check if any user has this email by checking auth users
-          const { data: { users } } = await supabase.auth.admin.listUsers();
-          const userExists = users?.some(user => user.email === identifier);
-          return userExists || false;
+        if (error) {
+          console.error('Error listing users:', error);
+          return false;
         }
-        return false;
+        
+        const userExists = authResponse?.users?.some((user: any) => user.email === identifier);
+        return userExists || false;
       } else {
         // For phone, check in profiles table
         const { data } = await supabase
