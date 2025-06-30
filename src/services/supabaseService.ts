@@ -62,20 +62,16 @@ class SupabaseService {
           data: {
             name,
             phone: isEmail ? phone : identifier,
-            email: isEmail ? identifier : email
+            email: isEmail ? identifier : email,
+            role: 'client'
           },
           emailRedirectTo: `${window.location.origin}/`
         }
       });
 
       if (data.user && !error) {
-        try {
-          await this.createProfile(data.user.id, name, isEmail ? identifier : email, isEmail ? phone : identifier);
-          console.log('Profile created successfully for user:', data.user.id);
-          this.clearCache('profile');
-        } catch (profileError) {
-          this.handleError(profileError, 'Profile Creation');
-        }
+        console.log('Client signup successful for user:', data.user.id);
+        this.clearCache('profile');
       }
 
       return { data, error };
@@ -157,7 +153,7 @@ class SupabaseService {
   }
 
   // Profile Management with caching
-  async createProfile(userId: string, name: string, email: string, phone: string, role: 'client' | 'admin' = 'client') {
+  async createProfile(userId: string, name: string, email: string, phone: string, role: 'client' | 'admin' | 'designer' = 'client') {
     try {
       console.log('Creating profile for user:', userId, { name, email, phone, role });
       
@@ -838,7 +834,7 @@ class SupabaseService {
     this.clearCache();
   }
 
-  // Designer Management methods
+  // Designer Management methods with improved error handling
   async signUpDesigner(designerData: {
     email: string;
     password: string;
@@ -866,6 +862,12 @@ class SupabaseService {
           emailRedirectTo: `${window.location.origin}/`
         }
       });
+
+      if (data.user && !error) {
+        console.log('Designer signup successful for user:', data.user.id);
+        this.clearCache('profile');
+        this.clearCache('all_designers');
+      }
 
       return { data, error };
     } catch (error) {
