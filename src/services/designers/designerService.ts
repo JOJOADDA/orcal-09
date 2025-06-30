@@ -25,6 +25,15 @@ export class DesignerService extends CacheService {
     try {
       console.log('Designer signup attempt:', designerData.email);
       
+      // تحقق من وجود المصمم مسبقاً
+      const existingDesigner = await this.checkExistingDesigner(designerData.email);
+      if (existingDesigner) {
+        return { 
+          data: null, 
+          error: { message: 'Designer already exists with this email' } 
+        };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email: designerData.email,
         password: designerData.password,
@@ -50,6 +59,20 @@ export class DesignerService extends CacheService {
       return { data, error };
     } catch (error) {
       return { data: null, error: this.handleError(error, 'Designer SignUp') };
+    }
+  }
+
+  private async checkExistingDesigner(email: string) {
+    try {
+      const { data, error } = await supabase
+        .from('designers')
+        .select('id')
+        .eq('email', email)
+        .single();
+
+      return data && !error;
+    } catch (error) {
+      return false;
     }
   }
 

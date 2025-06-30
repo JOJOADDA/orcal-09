@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +89,84 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     };
   }, [signupData, detectIdentifierType, validateEmail, validatePhone, formatPhoneNumber]);
 
+  // Optimized signup handler with better error handling
+  const handleSignup = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!signupValidation.isValid) {
+      const firstError = Object.values(signupValidation.errors).find(Boolean);
+      toast({ 
+        title: "خطأ في البيانات", 
+        description: firstError, 
+        variant: "destructive" 
+      });
+      return;
+    }
+
+    const identifierType = detectIdentifierType(signupData.identifier);
+    const identifier = identifierType === 'email' ? 
+      signupData.identifier : 
+      formatPhoneNumber(signupData.identifier);
+
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabaseService.signUp(
+        identifier,
+        signupData.password,
+        signupData.name,
+        identifierType === 'phone' ? identifier : ''
+      );
+
+      if (error) {
+        let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
+        
+        if (error.message.includes('User already registered') || 
+            error.message.includes('already exists')) {
+          errorMessage = "هذا الحساب مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من ذلك.";
+        } else if (error.message.includes('Password should be at least 6 characters')) {
+          errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+        } else if (error.message.includes('Invalid email')) {
+          errorMessage = "البريد الإلكتروني غير صحيح";
+        } else if (error.message.includes('duplicate key')) {
+          errorMessage = "هذا البريد الإلكتروني مستخدم مسبقاً";
+        }
+        
+        console.error('Signup error details:', error);
+        toast({
+          title: "فشل التسجيل",
+          description: errorMessage,
+          variant: "destructive"
+        });
+        return;
+      }
+
+      if (data.user) {
+        if (identifierType === 'email') {
+          setEmailSent(true);
+          toast({
+            title: "تم إرسال رسالة التأكيد!",
+            description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب لتسجيل الدخول"
+          });
+        } else {
+          toast({
+            title: "تم إنشاء الحساب بنجاح!",
+            description: "مرحباً بك في أوركال للدعاية والإعلان"
+          });
+          setTimeout(() => onAuthSuccess(), 1000);
+        }
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      toast({ 
+        title: "خطأ", 
+        description: "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [signupData, signupValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
+
   // Optimized login handler
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -151,78 +228,6 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       setIsLoading(false);
     }
   }, [loginData, loginValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
-
-  // Optimized signup handler
-  const handleSignup = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!signupValidation.isValid) {
-      const firstError = Object.values(signupValidation.errors).find(Boolean);
-      toast({ 
-        title: "خطأ في البيانات", 
-        description: firstError, 
-        variant: "destructive" 
-      });
-      return;
-    }
-
-    const identifierType = detectIdentifierType(signupData.identifier);
-    const identifier = identifierType === 'email' ? 
-      signupData.identifier : 
-      formatPhoneNumber(signupData.identifier);
-
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabaseService.signUp(
-        identifier,
-        signupData.password,
-        signupData.name,
-        identifierType === 'phone' ? identifier : ''
-      );
-
-      if (error) {
-        let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
-        
-        if (error.message.includes('User already registered')) {
-          errorMessage = "هذا الحساب مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من ذلك.";
-        } else if (error.message.includes('Password should be at least 6 characters')) {
-          errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
-        }
-        
-        toast({
-          title: "فشل التسجيل",
-          description: errorMessage,
-          variant: "destructive"
-        });
-        return;
-      }
-
-      if (data.user) {
-        if (identifierType === 'email') {
-          setEmailSent(true);
-          toast({
-            title: "تم إرسال رسالة التأكيد!",
-            description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب لتسجيل الدخول"
-          });
-        } else {
-          toast({
-            title: "تم إنشاء الحساب بنجاح!",
-            description: "تم تسجيل الدخول تلقائياً. مرحباً بك في أوركال"
-          });
-          setTimeout(() => onAuthSuccess(), 1000);
-        }
-      }
-    } catch (error) {
-      console.error('Signup error:', error);
-      toast({ 
-        title: "خطأ", 
-        description: "حدث خطأ أثناء إنشاء الحساب", 
-        variant: "destructive" 
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [signupData, signupValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
 
   const resendConfirmation = useCallback(async () => {
     if (signupData.identifier && validateEmail(signupData.identifier)) {
