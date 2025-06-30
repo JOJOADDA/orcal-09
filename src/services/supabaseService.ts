@@ -4,7 +4,6 @@ import { authService } from './auth/authService';
 import { profileService } from './profiles/profileService';
 import { orderService } from './orders/orderService';
 import { chatService } from './chat/chatService';
-import { designerService } from './designers/designerService';
 import { fileService } from './files/fileService';
 import { statisticsService } from './statistics/statisticsService';
 
@@ -37,7 +36,7 @@ class SupabaseService {
   }
 
   // Profile Management
-  async createProfile(userId: string, name: string, email: string, phone: string, role: 'client' | 'admin' | 'designer' = 'client') {
+  async createProfile(userId: string, name: string, email: string, phone: string, role: 'client' | 'admin' = 'client') {
     return await profileService.createProfile(userId, name, email, phone, role);
   }
 
@@ -197,41 +196,8 @@ class SupabaseService {
     profileService.clearAllCache();
     orderService.clearAllCache();
     chatService.clearAllCache();
-    designerService.clearAllCache();
     fileService.clearAllCache();
     statisticsService.clearAllCache();
-  }
-
-  // Designer Management
-  async signUpDesigner(designerData: {
-    email: string;
-    password: string;
-    name: string;
-    phone?: string;
-    specialization?: string;
-    experienceYears?: number;
-    portfolioUrl?: string;
-  }) {
-    return await designerService.signUpDesigner(designerData);
-  }
-
-  async getDesignerByUserId(userId: string) {
-    return await designerService.getDesignerByUserId(userId);
-  }
-
-  async getAllDesigners() {
-    return await designerService.getAllDesigners();
-  }
-
-  async updateDesigner(userId: string, updates: Partial<{
-    name: string;
-    phone: string;
-    specialization: string;
-    experience_years: number;
-    portfolio_url: string;
-    status: 'active' | 'inactive' | 'pending';
-  }>) {
-    return await designerService.updateDesigner(userId, updates);
   }
 }
 
