@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -81,12 +80,29 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
     try {
       console.log('Attempting designer login with email:', loginData.email);
       
+      // البحث عن المصمم بالبريد الإلكتروني أولاً للتحقق من وجوده
+      let designer = await designerService.getDesignerByEmail(loginData.email);
+      
+      if (!designer) {
+        toast({
+          title: "غير مصرح",
+          description: "هذا البريد الإلكتروني غير مسجل كمصمم. يرجى إنشاء حساب مصمم أولاً.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      console.log('Designer found in database:', designer);
+      
+      // محاولة تسجيل الدخول
       const { data, error } = await authService.signIn(loginData.email, loginData.password, 'email');
       
       if (error) {
         let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
         
-        if (error.message.includes('Invalid login credentials')) {
+        if (error.message.includes('User already registered')) {
+          errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.";
+        } else if (error.message.includes('Invalid login credentials')) {
           errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
         } else if (error.message.includes('Email not confirmed')) {
           errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً";
@@ -101,46 +117,30 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
       }
 
       if (data.user) {
-        console.log('Auth successful, checking designer status for user:', data.user.id);
+        console.log('Auth successful, checking designer linkage for user:', data.user.id);
         
-        // البحث عن المصمم بالـ user_id أولاً
-        let designer = await designerService.getDesignerByUserId(data.user.id);
-        
-        // إذا لم نجد بالـ user_id، نبحث بالبريد الإلكتروني
-        if (!designer) {
-          console.log('Designer not found by user_id, searching by email...');
-          designer = await designerService.getDesignerByEmail(loginData.email);
-          
-          // إذا وجدنا المصمم بالبريد الإلكتروني ولكن user_id غير مربوط، نقوم بربطه
-          if (designer && !designer.user_id) {
-            console.log('Found designer by email, linking user_id...');
-            const linkResult = await designerService.linkDesignerToUser(designer.id, data.user.id);
-            if (linkResult.data) {
-              designer.user_id = data.user.id;
-            }
+        // التحقق من ربط المصمم بـ user_id
+        if (!designer.user_id || designer.user_id !== data.user.id) {
+          console.log('Linking designer to authenticated user...');
+          const linkResult = await designerService.linkDesignerToUser(designer.id, data.user.id);
+          if (linkResult.data) {
+            designer.user_id = data.user.id;
+            console.log('Designer successfully linked to user');
+          } else {
+            console.error('Failed to link designer to user:', linkResult.error);
           }
         }
         
-        if (designer) {
-          console.log('Designer found:', designer);
-          toast({
-            title: "تم تسجيل الدخول بنجاح!",
-            description: `مرحباً ${designer.name}، يمكنك الآن إدارة المشاريع`
-          });
-          onDesignerLogin({ 
-            name: designer.name, 
-            role: 'designer', 
-            email: designer.email 
-          });
-        } else {
-          console.log('Designer not found in database');
-          toast({
-            title: "غير مصرح",
-            description: "هذا الحساب غير مسجل كمصمم. يرجى التأكد من إنشاء حساب مصمم أولاً.",
-            variant: "destructive"
-          });
-          await authService.signOut();
-        }
+        toast({
+          title: "تم تسجيل الدخول بنجاح!",
+          description: `مرحباً ${designer.name}، يمكنك الآن إدارة المشاريع`
+        });
+        
+        onDesignerLogin({ 
+          name: designer.name, 
+          role: 'designer', 
+          email: designer.email 
+        });
       }
     } catch (error) {
       console.error('Designer login error:', error);
@@ -245,10 +245,10 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
         setActiveTab('login');
         
         // Pre-fill login email
-        setLoginData({
-          email: signupData.email,
-          password: ''
-        });
+        setLoginData(prev => ({
+          ...prev,
+          email: signupData.email
+        }));
       }
     } catch (error) {
       console.error('Designer signup error:', error);

@@ -162,15 +162,20 @@ export class DesignerService extends CacheService {
         .from('designers')
         .select('*')
         .eq('email', email)
-        .single();
+        .maybeSingle(); // استخدام maybeSingle بدلاً من single لتجنب الأخطاء
 
       if (error) {
         console.error('Designer fetch by email error:', error);
         return null;
       }
       
-      this.setCache(cacheKey, data);
-      console.log('Designer fetched by email successfully:', data);
+      if (data) {
+        this.setCache(cacheKey, data);
+        console.log('Designer fetched by email successfully:', data);
+      } else {
+        console.log('No designer found with email:', email);
+      }
+      
       return data;
     } catch (error) {
       this.handleError(error, 'Get Designer By Email');
