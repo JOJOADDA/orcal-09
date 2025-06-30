@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -71,12 +72,15 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
         throw new Error('Chat room not found');
       }
 
+      // Map designer role to admin for message sending
+      const senderRole = user.role === 'designer' ? 'admin' : user.role as 'client' | 'admin' | 'system';
+
       const { error } = await supabaseService.sendMessage({
         room_id: room.id,
         order_id: order.id,
         sender_id: user.id,
         sender_name: user.name,
-        sender_role: user.role,
+        sender_role: senderRole,
         content: newMessage
       });
 
@@ -247,3 +251,4 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
 };
 
 export default ChatWindow;
+
