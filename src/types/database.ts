@@ -66,7 +66,7 @@ export interface ChatMessage {
   order_id: string;
   sender_id: string;
   sender_name: string;
-  sender_role: 'client' | 'admin' | 'system';
+  sender_role: 'client' | 'admin' | 'designer' | 'system';
   content: string;
   message_type: 'text' | 'file' | 'system';
   is_read: boolean;

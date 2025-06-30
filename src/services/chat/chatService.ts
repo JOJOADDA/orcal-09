@@ -109,7 +109,7 @@ export class ChatService extends CacheService {
 
       const messages = data.map(message => ({
         ...message,
-        sender_role: message.sender_role as 'client' | 'admin' | 'system',
+        sender_role: message.sender_role as 'client' | 'admin' | 'designer' | 'system',
         message_type: message.message_type as 'text' | 'file' | 'system'
       })) as ChatMessage[];
 
@@ -142,7 +142,7 @@ export class ChatService extends CacheService {
       
       const messages = data.map(message => ({
         ...message,
-        sender_role: message.sender_role as 'client' | 'admin' | 'system',
+        sender_role: message.sender_role as 'client' | 'admin' | 'designer' | 'system',
         message_type: message.message_type as 'text' | 'file' | 'system'
       })) as ChatMessage[];
 
@@ -160,7 +160,7 @@ export class ChatService extends CacheService {
     order_id: string;
     sender_id: string;
     sender_name: string;
-    sender_role: 'client' | 'admin' | 'system';
+    sender_role: 'client' | 'admin' | 'designer' | 'system';
     content: string;
     message_type?: 'text' | 'file' | 'system';
   }) {
@@ -224,7 +224,7 @@ export class ChatService extends CacheService {
             console.log('New message received via real-time:', payload.new);
             const message = {
               ...payload.new,
-              sender_role: payload.new.sender_role as 'client' | 'admin' | 'system',
+              sender_role: payload.new.sender_role as 'client' | 'admin' | 'designer' | 'system',
               message_type: payload.new.message_type as 'text' | 'file' | 'system'
             } as ChatMessage;
             
