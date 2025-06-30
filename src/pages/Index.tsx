@@ -107,7 +107,6 @@ const Index = () => {
   if (showAuth) {
     return (
       <AuthPage 
-        onClose={() => setShowAuth(false)}
         onLogin={handleLogin}
       />
     );
@@ -116,9 +115,9 @@ const Index = () => {
   // عرض لوحات التحكم للمستخدمين المسجلين
   if (user && userProfile) {
     if (userProfile.role === 'admin') {
-      return <AdminDashboard user={user} userProfile={userProfile} onLogout={handleLogout} />;
+      return <AdminDashboard user={user} profile={userProfile} onLogout={handleLogout} />;
     } else {
-      return <ClientDashboard user={user} userProfile={userProfile} onLogout={handleLogout} />;
+      return <ClientDashboard user={user} profile={userProfile} onLogout={handleLogout} />;
     }
   }
 
@@ -128,7 +127,7 @@ const Index = () => {
         onLoginClick={() => setShowAuth(true)}
         onDesignerClick={() => setShowDesignerAccess(true)}
       />
-      <HeroSection onGetStarted={() => setShowAuth(true)} />
+      <HeroSection />
       <ServicesSection />
       <PortfolioSection />
       <PricingSection />
