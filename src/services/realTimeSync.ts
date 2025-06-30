@@ -34,11 +34,21 @@ export class RealTimeSyncService {
           },
           (payload) => {
             console.log('Order update received:', payload);
+            
+            // التحقق من وجود البيانات قبل الوصول إليها
+            if (!payload.new || typeof payload.new !== 'object') {
+              console.warn('Invalid payload received:', payload);
+              return;
+            }
+
+            const orderData = payload.new as any;
+            
             const order = {
-              ...payload.new,
-              status: payload.new.status as 'pending' | 'in-progress' | 'completed' | 'delivered',
-              priority: payload.new.priority as 'low' | 'medium' | 'high'
+              ...orderData,
+              status: (orderData.status || 'pending') as 'pending' | 'in-progress' | 'completed' | 'delivered',
+              priority: (orderData.priority || 'medium') as 'low' | 'medium' | 'high'
             } as DesignOrder;
+            
             callback(order);
           }
         )
@@ -76,11 +86,21 @@ export class RealTimeSyncService {
           },
           (payload) => {
             console.log('New message received across system:', payload.new);
+            
+            // التحقق من وجود البيانات قبل الوصول إليها
+            if (!payload.new || typeof payload.new !== 'object') {
+              console.warn('Invalid message payload received:', payload);
+              return;
+            }
+
+            const messageData = payload.new as any;
+            
             const message = {
-              ...payload.new,
-              sender_role: payload.new.sender_role as 'client' | 'admin' | 'designer' | 'system',
-              message_type: payload.new.message_type as 'text' | 'file' | 'system'
+              ...messageData,
+              sender_role: (messageData.sender_role || 'client') as 'client' | 'admin' | 'designer' | 'system',
+              message_type: (messageData.message_type || 'text') as 'text' | 'file' | 'system'
             } as ChatMessage & { order_id: string };
+            
             callback(message);
           }
         )
