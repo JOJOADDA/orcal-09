@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import UnifiedChatWindow from './chat/UnifiedChatWindow';
@@ -26,13 +25,16 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   });
 
   // Show error if exists
-  if (error) {
-    toast({
-      title: "خطأ",
-      description: error,
-      variant: "destructive"
-    });
-  }
+  useEffect(() => {
+    if (error) {
+      console.error('Orders loading error:', error);
+      toast({
+        title: "خطأ",
+        description: error,
+        variant: "destructive"
+      });
+    }
+  }, [error, toast]);
 
   const handleOrderCreated = () => {
     setIsCreateOrderOpen(false);
@@ -48,19 +50,45 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   };
 
   const handleOpenChat = (orderId: string) => {
+    console.log('Opening chat for order:', orderId);
+    console.log('User info:', { id: user.id, name: user.name, role: user.role });
+    
+    const selectedOrder = orders.find(order => order.id === orderId);
+    if (!selectedOrder) {
+      console.error('Order not found:', orderId);
+      toast({
+        title: "خطأ",
+        description: "لم يتم العثور على الطلب",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    console.log('Selected order:', selectedOrder);
     setSelectedOrderId(orderId);
   };
 
   if (selectedOrderId) {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
+      console.log('Rendering UnifiedChatWindow with:', {
+        user: { id: user.id, name: user.name, role: user.role },
+        order: { id: selectedOrder.id, design_type: selectedOrder.design_type }
+      });
+      
       return (
         <UnifiedChatWindow
           user={user}
           order={selectedOrder}
-          onClose={() => setSelectedOrderId(null)}
+          onClose={() => {
+            console.log('Closing chat window');
+            setSelectedOrderId(null);
+          }}
         />
       );
+    } else {
+      console.error('Selected order not found, closing chat');
+      setSelectedOrderId(null);
     }
   }
 

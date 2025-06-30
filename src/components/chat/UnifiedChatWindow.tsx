@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { X, Send, MessageSquare, Paperclip, Image, File } from 'lucide-react';
+import { X, Send, MessageSquare, Paperclip, Image, File, AlertCircle } from 'lucide-react';
 import { Profile, ChatMessage, DesignOrder, MessageFile } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { unifiedChatService } from '@/services/unified/unifiedChatService';
@@ -23,11 +23,15 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('UnifiedChatWindow mounted for order:', order.id);
+    console.log('User:', user.name, 'Role:', user.role);
+    
     loadMessages();
     
     const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (newMessage) => {
@@ -57,9 +61,14 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
   }, [messages]);
 
   const loadMessages = async () => {
-    setIsLoadingMessages(true);
     try {
+      setIsLoadingMessages(true);
+      setError(null);
+      
+      console.log('Loading messages for order:', order.id);
       const orderMessages = await unifiedChatService.getMessages(order.id);
+      
+      console.log('Loaded messages:', orderMessages.length);
       setMessages(orderMessages);
       
       // Load files for each message
@@ -72,6 +81,7 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
       await unifiedChatService.markMessagesAsRead(order.id, user.id);
     } catch (error) {
       console.error('Error loading messages:', error);
+      setError('فشل في تحميل الرسائل');
       toast({
         title: "خطأ",
         description: "فشل في تحميل الرسائل",
@@ -100,7 +110,10 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || []);
-    setSelectedFiles(prev => [...prev, ...files]);
+    if (files.length > 0) {
+      console.log('Selected files:', files.map(f => f.name));
+      setSelectedFiles(prev => [...prev, ...files]);
+    }
   };
 
   const removeSelectedFile = (index: number) => {
@@ -113,8 +126,14 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
     if (!newMessage.trim() && selectedFiles.length === 0) return;
 
     setIsLoading(true);
+    setError(null);
     
     try {
+      console.log('Sending message...');
+      console.log('User ID:', user.id);
+      console.log('User Role:', user.role);
+      console.log('Order ID:', order.id);
+      
       const senderRole = user.role === 'designer' ? 'admin' : user.role as 'client' | 'admin' | 'system';
       
       const result = await unifiedChatService.sendMessage({
@@ -131,6 +150,7 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
         throw result.error;
       }
 
+      console.log('Message sent successfully');
       setNewMessage('');
       setSelectedFiles([]);
       if (fileInputRef.current) {
@@ -143,6 +163,7 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
       });
     } catch (error) {
       console.error('Error sending message:', error);
+      setError('فشل في إرسال الرسالة');
       toast({
         title: "خطأ",
         description: "فشل في إرسال الرسالة",
@@ -211,6 +232,15 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
         </CardHeader>
         
         <CardContent className="flex-1 flex flex-col p-0">
+          {error && (
+            <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4">
+              <div className="flex">
+                <AlertCircle className="h-5 w-5 text-red-400 ml-2" />
+                <p className="text-sm text-red-700">{error}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
             {isLoadingMessages ? (
               <div className="text-center py-12">
