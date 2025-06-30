@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
-import UnifiedChatWindow from './chat/UnifiedChatWindow';
+import ChatWindow from './chat/ChatWindow';
 import { useToast } from '@/hooks/use-toast';
 import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import ClientHeader from './client/ClientHeader';
@@ -55,7 +55,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
       return (
-        <UnifiedChatWindow
+        <ChatWindow
           user={user}
           order={selectedOrder}
           onClose={() => setSelectedOrderId(null)}

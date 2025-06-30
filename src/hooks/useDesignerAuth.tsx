@@ -8,11 +8,12 @@ export const useDesignerAuth = () => {
   const [designerUser, setDesignerUser] = useState<Profile | null>(null);
   const [isDesignerAuthenticated, setIsDesignerAuthenticated] = useState(false);
   const [showDesignerAuth, setShowDesignerAuth] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Check for existing designer session on mount
   useEffect(() => {
     const checkDesignerSession = async () => {
+      setIsLoading(true);
       try {
         const profile = await designerAuthService.getCurrentDesignerProfile();
         if (profile) {
@@ -21,6 +22,8 @@ export const useDesignerAuth = () => {
         }
       } catch (error) {
         console.error('Error checking designer session:', error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -44,6 +47,7 @@ export const useDesignerAuth = () => {
           setDesignerUser(null);
           setIsDesignerAuthenticated(false);
         }
+        setIsLoading(false);
       }
     );
 

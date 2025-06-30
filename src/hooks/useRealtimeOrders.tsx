@@ -11,13 +11,14 @@ interface UseRealtimeOrdersProps {
 
 export const useRealtimeOrders = ({ user, subscriptionId }: UseRealtimeOrdersProps) => {
   const [orders, setOrders] = useState<DesignOrder[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Load initial orders without showing loading
+  // Load initial orders
   const loadOrders = useCallback(async () => {
     if (!user) return;
     
+    setIsLoading(true);
     setError(null);
     
     try {
@@ -34,6 +35,8 @@ export const useRealtimeOrders = ({ user, subscriptionId }: UseRealtimeOrdersPro
     } catch (err) {
       console.error('Error loading orders:', err);
       setError('فشل في تحميل الطلبات');
+    } finally {
+      setIsLoading(false);
     }
   }, [user]);
 
@@ -41,7 +44,7 @@ export const useRealtimeOrders = ({ user, subscriptionId }: UseRealtimeOrdersPro
   useEffect(() => {
     if (!user) return;
 
-    // Load initial data immediately
+    // Load initial data
     loadOrders();
 
     // Set up real-time subscription
