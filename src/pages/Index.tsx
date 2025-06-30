@@ -13,7 +13,7 @@ const Index = () => {
 
   useEffect(() => {
     initializeAuth();
-
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state changed:', event, session?.user?.id);
@@ -72,7 +72,7 @@ const Index = () => {
     setIsAuthenticated(false);
   };
 
-  // تم إلغاء شاشة التحميل
+  // حذف شاشة التحميل
   if (isLoading) return null;
 
   if (!isAuthenticated || !currentUser) {
