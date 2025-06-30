@@ -121,6 +121,11 @@ class SupabaseService {
       .select()
       .single();
 
+    if (data && !error) {
+      // Create chat room for the order
+      await this.createChatRoom(data.id, orderData.client_id);
+    }
+
     return { data: data as DesignOrder, error };
   }
 
@@ -234,6 +239,29 @@ class SupabaseService {
     return { error };
   }
 
+  // File upload functionality
+  async uploadFile(file: File, bucket: string, userId: string): Promise<string | null> {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userId}/${Date.now()}.${fileExt}`;
+
+    // For now, we'll create a placeholder URL since we don't have storage buckets set up
+    // In a real implementation, you'd upload to Supabase storage
+    const mockUrl = `https://placeholder.com/${fileName}`;
+    return mockUrl;
+  }
+
+  // Add order file method
+  async addOrderFile(fileData: {
+    order_id: string;
+    name: string;
+    url: string;
+    file_type: 'image' | 'document' | 'design';
+    size_bytes: number;
+    uploaded_by: string;
+  }) {
+    return await this.uploadOrderFile(fileData);
+  }
+
   // Chat Management
   async createChatRoom(orderId: string, clientId: string, adminId?: string) {
     const { data, error } = await supabase
@@ -263,6 +291,23 @@ class SupabaseService {
     return data as ChatRoom;
   }
 
+  async getChatRoomByOrderId(orderId: string): Promise<ChatRoom | null> {
+    return await this.getChatRoom(orderId);
+  }
+
+  async getAllChatRooms(): Promise<ChatRoom[]> {
+    const { data, error } = await supabase
+      .from('chat_rooms')
+      .select('*')
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching chat rooms:', error);
+      return [];
+    }
+    return data as ChatRoom[];
+  }
+
   async getChatMessages(roomId: string): Promise<ChatMessage[]> {
     const { data, error } = await supabase
       .from('chat_messages')
@@ -272,6 +317,24 @@ class SupabaseService {
 
     if (error) {
       console.error('Error fetching chat messages:', error);
+      return [];
+    }
+    return data.map(message => ({
+      ...message,
+      sender_role: message.sender_role as 'client' | 'admin' | 'system',
+      message_type: message.message_type as 'text' | 'file' | 'system'
+    })) as ChatMessage[];
+  }
+
+  async getMessagesByOrderId(orderId: string): Promise<ChatMessage[]> {
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching messages by order ID:', error);
       return [];
     }
     return data.map(message => ({
@@ -310,6 +373,51 @@ class SupabaseService {
       .neq('sender_id', userId);
 
     return { error };
+  }
+
+  // Statistics
+  async getStatistics() {
+    const [ordersData, profilesData] = await Promise.all([
+      supabase.from('design_orders').select('status'),
+      supabase.from('profiles').select('role').eq('role', 'client')
+    ]);
+
+    const orders = ordersData.data || [];
+    const clients = profilesData.data || [];
+
+    return {
+      totalOrders: orders.length,
+      pendingOrders: orders.filter(o => o.status === 'pending').length,
+      inProgressOrders: orders.filter(o => o.status === 'in-progress').length,
+      completedOrders: orders.filter(o => o.status === 'completed').length,
+      activeClients: clients.length
+    };
+  }
+
+  // Real-time subscriptions
+  subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void) {
+    const channel = supabase
+      .channel(`messages-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'chat_messages',
+          filter: `order_id=eq.${orderId}`
+        },
+        (payload) => {
+          const message = {
+            ...payload.new,
+            sender_role: payload.new.sender_role as 'client' | 'admin' | 'system',
+            message_type: payload.new.message_type as 'text' | 'file' | 'system'
+          } as ChatMessage;
+          callback(message);
+        }
+      )
+      .subscribe();
+
+    return channel;
   }
 
   // Message Files

@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { User, LogIn, Mail, Lock } from 'lucide-react';
-import { chatService } from '@/services/chatService';
+import { supabaseService } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 
 interface LoginFormProps {
@@ -40,17 +41,24 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
 
     setIsLoading(true);
     try {
-      const user = chatService.createUser(formData.name, formData.email, formData.password);
-      chatService.setCurrentUser(user.id);
-      toast({
-        title: "مرحباً بك!",
-        description: `أهلاً ${user.name}، تم تسجيل الدخول بنجاح`
-      });
-      onLogin(user.id);
-    } catch (error) {
+      // Use supabaseService for authentication
+      const { data, error } = await supabaseService.signUp(formData.email, formData.password, formData.name);
+      
+      if (error) {
+        throw error;
+      }
+
+      if (data.user) {
+        toast({
+          title: "مرحباً بك!",
+          description: `أهلاً ${formData.name}، تم تسجيل الدخول بنجاح`
+        });
+        onLogin(data.user.id);
+      }
+    } catch (error: any) {
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء تسجيل الدخول، يرجى المحاولة لاحقاً",
+        description: error.message || "حدث خطأ أثناء تسجيل الدخول، يرجى المحاولة لاحقاً",
         variant: "destructive"
       });
     } finally {
@@ -58,9 +66,16 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
     }
   };
 
-  const handleAdminLogin = () => {
-    chatService.setCurrentUser('admin-1');
-    onLogin('admin-1');
+  const handleAdminLogin = async () => {
+    // Create a mock admin login
+    try {
+      const { data, error } = await supabaseService.signIn('admin@orcal.app', 'admin123');
+      if (data.user && !error) {
+        onLogin(data.user.id);
+      }
+    } catch (error) {
+      console.error('Admin login failed:', error);
+    }
   };
 
   return (

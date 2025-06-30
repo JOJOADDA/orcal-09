@@ -1,32 +1,7 @@
-import { supabase } from "@/integrations/supabase/client";
 
-export const supabaseService = {
-  async signUp(email: string, password: string, name: string, phone: string) {
-    return await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          phone,
-        }
-      }
-    });
-  },
+import { createClient } from '@supabase/supabase-js';
 
-  async signIn(email: string, password: string) {
-    return await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-  },
+const supabaseUrl = 'https://uloyiazdqsnoftkmkllc.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsb3lpYXpkcXNub2Z0a21rbGxjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTExNzkwNTEsImV4cCI6MjA2Njc1NTA1MX0.X2G37sjj8tDpdsvCWs-xf6BLyn3FR-dYSfkBhnMDcDs';
 
-  async signOut() {
-    return await supabase.auth.signOut();
-  },
-
-  async getCurrentUser() {
-    const { data } = await supabase.auth.getUser();
-    return data.user;
-  }
-};
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
