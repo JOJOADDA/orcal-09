@@ -53,15 +53,23 @@ const Index = () => {
     initializeAuth();
   }, []);
 
-  const handleLogin = async (userData: any) => {
-    setUser(userData.user);
-    setUserProfile(userData.profile);
-    setShowAuth(false);
-    
-    toast({
-      title: "تم تسجيل الدخول بنجاح!",
-      description: `مرحباً ${userData.profile?.name || 'بك'}، يمكنك الآن إدارة المشاريع`
-    });
+  const handleAuthSuccess = async () => {
+    try {
+      const session = await supabaseService.getCurrentSession();
+      if (session?.user) {
+        setUser(session.user);
+        const profile = await supabaseService.getProfile(session.user.id);
+        setUserProfile(profile);
+        setShowAuth(false);
+        
+        toast({
+          title: "تم تسجيل الدخول بنجاح!",
+          description: `مرحباً ${profile?.name || 'بك'}، يمكنك الآن إدارة المشاريع`
+        });
+      }
+    } catch (error) {
+      console.error('Auth success error:', error);
+    }
   };
 
   const handleLogout = async () => {
@@ -107,7 +115,7 @@ const Index = () => {
   if (showAuth) {
     return (
       <AuthPage 
-        onLogin={handleLogin}
+        onAuthSuccess={handleAuthSuccess}
       />
     );
   }
@@ -115,9 +123,9 @@ const Index = () => {
   // عرض لوحات التحكم للمستخدمين المسجلين
   if (user && userProfile) {
     if (userProfile.role === 'admin') {
-      return <AdminDashboard user={user} profile={userProfile} onLogout={handleLogout} />;
+      return <AdminDashboard user={userProfile} onLogout={handleLogout} />;
     } else {
-      return <ClientDashboard user={user} profile={userProfile} onLogout={handleLogout} />;
+      return <ClientDashboard user={userProfile} onLogout={handleLogout} />;
     }
   }
 
