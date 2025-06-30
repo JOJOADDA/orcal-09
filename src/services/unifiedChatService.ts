@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ChatRoom, ChatMessage, DesignOrder, OrderFile, MessageFile } from '@/types/database';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -19,10 +18,10 @@ export class UnifiedChatService {
     return error;
   }
 
-  // إنشاء أو جلب غرفة الدردشة مع التأكد من المزامنة
-  async getOrCreateChatRoom(orderId: string, clientId: string): Promise<ChatRoom | null> {
+  // إنشاء أو جلب غرفة الدردشة مع دعم المصممين
+  async getOrCreateChatRoom(orderId: string, userId: string, userRole: string = 'client'): Promise<ChatRoom | null> {
     try {
-      console.log('Getting/Creating chat room for order:', orderId);
+      console.log('Getting/Creating chat room for order:', orderId, 'User:', userId, 'Role:', userRole);
       
       // محاولة جلب الغرفة الموجودة أولاً
       const { data: existingRoom, error: fetchError } = await supabase
@@ -36,16 +35,35 @@ export class UnifiedChatService {
         return existingRoom as ChatRoom;
       }
 
-      // إنشاء غرفة جديدة إذا لم توجد
+      // إنشاء غرفة جديدة
+      const roomData: any = {
+        order_id: orderId,
+        unread_count: 0,
+        is_active: true
+      };
+
+      // تحديد العميل والإدمن/المصمم بناءً على الدور
+      if (userRole === 'client') {
+        roomData.client_id = userId;
+        roomData.admin_id = null;
+      } else {
+        // للمصمم أو الإدمن
+        roomData.admin_id = userId;
+        // نحتاج لجلب معرف العميل من الطلب
+        const { data: orderData } = await supabase
+          .from('design_orders')
+          .select('client_id')
+          .eq('id', orderId)
+          .single();
+        
+        if (orderData) {
+          roomData.client_id = orderData.client_id;
+        }
+      }
+
       const { data: newRoom, error: createError } = await supabase
         .from('chat_rooms')
-        .insert({
-          order_id: orderId,
-          client_id: clientId,
-          admin_id: null,
-          unread_count: 0,
-          is_active: true
-        })
+        .insert(roomData)
         .select()
         .single();
 
@@ -62,7 +80,7 @@ export class UnifiedChatService {
     }
   }
 
-  // جلب جميع الرسائل لطلب معين مع التحديث الفوري للإحصائيات
+  // جلب جميع الرسائل لطلب معين
   async getMessages(orderId: string): Promise<ChatMessage[]> {
     try {
       console.log('Fetching messages for order:', orderId);
@@ -92,7 +110,7 @@ export class UnifiedChatService {
     }
   }
 
-  // إرسال رسالة مع ضمان الوصول الفوري للطرف الآخر
+  // إرسال رسالة مع دعم كامل للمصممين
   async sendMessage(messageData: {
     order_id: string;
     sender_id: string;
@@ -103,27 +121,27 @@ export class UnifiedChatService {
     files?: OrderFile[];
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
     try {
-      console.log('Sending message with enhanced sync:', {
+      console.log('Sending message:', {
         content: messageData.content.substring(0, 50) + '...',
         sender_role: messageData.sender_role,
-        sender_name: messageData.sender_name
+        sender_name: messageData.sender_name,
+        sender_id: messageData.sender_id
       });
       
-      // التأكد من وجود معرف المرسل
-      if (!messageData.sender_id || messageData.sender_id === 'system') {
-        // إنشاء معرف فريد للمصمم إذا لم يكن موجود
-        if (messageData.sender_role === 'designer') {
-          messageData.sender_id = `designer-${messageData.sender_name.replace(/\s+/g, '-')}`;
-        }
-      }
-
-      // جلب أو إنشاء غرفة الدردشة
-      const room = await this.getOrCreateChatRoom(messageData.order_id, messageData.sender_id);
+      // التأكد من وجود غرفة الدردشة
+      const room = await this.getOrCreateChatRoom(
+        messageData.order_id, 
+        messageData.sender_id, 
+        messageData.sender_role
+      );
+      
       if (!room) {
         throw new Error('Failed to get or create chat room');
       }
 
-      // إرسال الرسالة مباشرة إلى جدول chat_messages
+      console.log('Using chat room:', room.id);
+
+      // إرسال الرسالة مباشرة
       const { data, error } = await supabase
         .from('chat_messages')
         .insert({
@@ -162,7 +180,7 @@ export class UnifiedChatService {
         })
         .eq('id', room.id);
 
-      console.log('Message sent successfully with real-time sync');
+      console.log('Message sent successfully with enhanced sync');
       return { success: true, message: data as ChatMessage };
     } catch (error) {
       console.error('Error in sendMessage:', error);
@@ -170,7 +188,6 @@ export class UnifiedChatService {
     }
   }
 
-  // إرفاق ملف برسالة
   async attachFileToMessage(messageId: string, file: OrderFile): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -200,7 +217,7 @@ export class UnifiedChatService {
     try {
       console.log('Uploading file:', file.name);
       
-      // محاكاة رفع الملف - في البيئة الحقيقية سيتم استخدام Supabase Storage
+      // محاكاة رفع الملف
       const fileUrl = `https://api.orcal.app/files/${uploaderId}/${Date.now()}_${file.name}`;
       
       const fileData: OrderFile = {
@@ -214,7 +231,6 @@ export class UnifiedChatService {
         uploaded_by: uploaderId
       };
 
-      // حفظ معلومات الملف في قاعدة البيانات
       const { data, error } = await supabase
         .from('order_files')
         .insert(fileData)
@@ -245,10 +261,10 @@ export class UnifiedChatService {
     return 'design';
   }
 
-  // الاشتراك في الرسائل الجديدة مع تحسينات الأداء
+  // الاشتراك في الرسائل الجديدة
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void): (() => void) | null {
     try {
-      console.log('Setting up enhanced real-time subscription for order:', orderId);
+      console.log('Setting up real-time subscription for order:', orderId);
       
       const channelName = `messages-${orderId}`;
       
@@ -269,7 +285,7 @@ export class UnifiedChatService {
             filter: `order_id=eq.${orderId}`
           },
           (payload) => {
-            console.log('Real-time message received with enhanced sync:', payload.new);
+            console.log('Real-time message received:', payload.new);
             
             if (!payload.new || typeof payload.new !== 'object') {
               console.warn('Invalid message payload received:', payload);
@@ -288,7 +304,7 @@ export class UnifiedChatService {
           }
         )
         .subscribe((status) => {
-          console.log('Enhanced subscription status:', status);
+          console.log('Subscription status:', status);
           if (status === 'SUBSCRIBED') {
             console.log('Real-time connection established for order:', orderId);
           }
@@ -296,7 +312,6 @@ export class UnifiedChatService {
 
       this.activeChannels.set(channelName, channel);
 
-      // إرجاع دالة إلغاء الاشتراك
       return () => {
         console.log('Unsubscribing from real-time messages for order:', orderId);
         channel.unsubscribe();
@@ -308,7 +323,6 @@ export class UnifiedChatService {
     }
   }
 
-  // تحديث حالة قراءة الرسائل
   async markMessagesAsRead(orderId: string, userId: string): Promise<boolean> {
     try {
       const { error } = await supabase
@@ -322,7 +336,6 @@ export class UnifiedChatService {
         return false;
       }
 
-      // تحديث عداد الرسائل غير المقروءة في الغرفة
       const { error: roomError } = await supabase
         .from('chat_rooms')
         .update({ unread_count: 0 })
@@ -339,7 +352,6 @@ export class UnifiedChatService {
     }
   }
 
-  // جلب ملفات الرسالة
   async getMessageFiles(messageId: string): Promise<MessageFile[]> {
     try {
       const { data, error } = await supabase
@@ -362,7 +374,6 @@ export class UnifiedChatService {
     }
   }
 
-  // إغلاق جميع الاشتراكات مع التأكد من التنظيف الكامل
   cleanup() {
     console.log('Cleaning up all real-time subscriptions...');
     this.activeChannels.forEach((channel, name) => {

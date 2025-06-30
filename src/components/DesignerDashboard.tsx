@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
 import ChatWindow from './chat/ChatWindow';
@@ -21,9 +20,9 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // إنشاء ملف تعريف مؤقت للمصمم
+  // إنشاء ملف تعريف للمصمم مع معرف ثابت
   const designerProfile = {
-    id: `designer-${designerData.name.replace(/\s+/g, '-')}`,
+    id: `designer-${designerData.name.replace(/\s+/g, '-').toLowerCase()}`,
     name: designerData.name,
     phone: '+249123456789',
     role: 'designer' as const,
@@ -96,7 +95,6 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
         throw result.error;
       }
 
-      // إرسال رسالة نظام للعميل
       const getStatusText = (status: DesignOrder['status']) => {
         const statusMap = {
           'pending': 'قيد الانتظار',
@@ -107,15 +105,21 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
         return statusMap[status];
       };
 
-      // إرسال إشعار للعميل
-      await unifiedChatService.sendMessage({
+      // إرسال إشعار للعميل من المصمم
+      const messageResult = await unifiedChatService.sendMessage({
         order_id: orderId,
-        sender_id: 'system',
-        sender_name: 'النظام',
-        sender_role: 'system',
+        sender_id: designerProfile.id,
+        sender_name: designerProfile.name,
+        sender_role: 'designer',
         content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
         message_type: 'system'
       });
+
+      if (messageResult.success) {
+        console.log('Status update message sent successfully');
+      } else {
+        console.error('Failed to send status update message:', messageResult.error);
+      }
 
       toast({
         title: "تم التحديث",
@@ -130,6 +134,12 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       });
     }
   };
+
+  // الاشتراك في التحديثات الفورية للطلبات
+  
+
+  // الاشتراك في الرسائل الجديدة من العملاء
+  
 
   if (selectedOrderId) {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
