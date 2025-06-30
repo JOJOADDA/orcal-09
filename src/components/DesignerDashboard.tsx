@@ -12,32 +12,29 @@ import DesignerStats from './designer/DesignerStats';
 import OrdersList from './designer/OrdersList';
 
 interface DesignerDashboardProps {
+  designerData: { name: string; role: string };
   onLogout: () => void;
 }
 
-const DesignerDashboard = ({ onLogout }: DesignerDashboardProps) => {
+const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) => {
   const [orders, setOrders] = useState<DesignOrder[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [designerProfile, setDesignerProfile] = useState<any>(null);
-  const [sessionId] = useState(() => DesignerProfileService.createSessionId());
   const { toast } = useToast();
+
+  // إنشاء ملف تعريف موثوق للمصمم
+  const [designerProfile, setDesignerProfile] = useState<any>(null);
 
   useEffect(() => {
     const initializeDesignerProfile = async () => {
       try {
-        console.log('Initializing unified designer profile');
+        console.log('Initializing designer profile for:', designerData.name);
         
-        const profile = await DesignerProfileService.createDesignerProfile();
-        // إضافة معرف الجلسة للملف الشخصي
-        const profileWithSession = {
-          ...profile,
-          sessionId: sessionId,
-          displayName: `مصمم - ${sessionId.split('-').pop()}`
-        };
+        // إنشاء ملف تعريف المصمم باستخدام الخدمة الجديدة
+        const profile = await DesignerProfileService.createDesignerProfile(designerData.name);
+        setDesignerProfile(profile);
         
-        setDesignerProfile(profileWithSession);
-        console.log('Unified designer profile initialized:', profileWithSession);
+        console.log('Designer profile initialized successfully:', profile);
       } catch (error) {
         console.error('Error initializing designer profile:', error);
         toast({
@@ -49,7 +46,7 @@ const DesignerDashboard = ({ onLogout }: DesignerDashboardProps) => {
     };
 
     initializeDesignerProfile();
-  }, [sessionId]);
+  }, [designerData.name]);
 
   useEffect(() => {
     if (!designerProfile) return;
@@ -74,6 +71,7 @@ const DesignerDashboard = ({ onLogout }: DesignerDashboardProps) => {
 
     // الاشتراك في الرسائل الجديدة من العملاء
     const unsubscribeMessages = realTimeSyncService.subscribeToAllMessages((message) => {
+      // إشعار المصمم بالرسائل الجديدة من العملاء فقط
       if (message.sender_role === 'client' && message.sender_id !== designerProfile.id) {
         const orderForMessage = orders.find(order => order.id === message.order_id);
         if (orderForMessage) {
@@ -136,7 +134,7 @@ const DesignerDashboard = ({ onLogout }: DesignerDashboardProps) => {
       const messageResult = await realChatService.sendMessage({
         order_id: orderId,
         sender_id: designerProfile.id,
-        sender_name: designerProfile.displayName,
+        sender_name: designerProfile.name,
         sender_role: 'admin',
         content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
         message_type: 'system'
@@ -167,6 +165,7 @@ const DesignerDashboard = ({ onLogout }: DesignerDashboardProps) => {
     }
   };
 
+  // لا نعرض شيء حتى يتم تهيئة ملف المصمم
   if (!designerProfile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50 flex items-center justify-center">
@@ -195,7 +194,7 @@ const DesignerDashboard = ({ onLogout }: DesignerDashboardProps) => {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-50">
       <div className="max-w-6xl mx-auto p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         <DesignerHeader 
-          designerName={designerProfile.displayName}
+          designerName={designerData.name}
           onLogout={onLogout}
         />
         
