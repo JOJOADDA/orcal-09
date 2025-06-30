@@ -22,13 +22,15 @@ const Index = () => {
     designerUser,
     isDesignerAuthenticated,
     showDesignerAuth,
+    isLoading: isDesignerLoading,
     setShowDesignerAuth,
-    handleDesignerLogin,
+    handleDesignerSignIn,
+    handleDesignerSignUp,
     handleDesignerLogout
   } = useDesignerAuth();
 
   // Loading state during initialization
-  if (isInitializing) {
+  if (isInitializing || isDesignerLoading) {
     return <LoadingScreen />;
   }
 
@@ -42,7 +44,8 @@ const Index = () => {
     return (
       <DesignerAuthDialog
         onClose={() => setShowDesignerAuth(false)}
-        onDesignerLogin={handleDesignerLogin}
+        onDesignerSignIn={handleDesignerSignIn}
+        onDesignerSignUp={handleDesignerSignUp}
       />
     );
   }

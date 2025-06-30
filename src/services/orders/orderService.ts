@@ -34,8 +34,8 @@ export class OrderService extends CacheService {
 
       if (data && !error) {
         console.log('Order created successfully:', data.id);
-        this.clearCache('orders');
-        this.clearCache('statistics');
+        // Clear all cache to ensure fresh data
+        this.clearAllCache();
       }
 
       return { data: data as DesignOrder, error };
@@ -46,10 +46,7 @@ export class OrderService extends CacheService {
 
   async getOrdersByClientId(clientId: string): Promise<DesignOrder[]> {
     try {
-      const cacheKey = `orders_client_${clientId}`;
-      const cached = this.getFromCache(cacheKey);
-      if (cached) return cached;
-
+      // Skip cache for now to ensure fresh data
       console.log('Fetching orders for client:', clientId);
       
       const { data, error } = await supabase
@@ -69,7 +66,6 @@ export class OrderService extends CacheService {
         priority: order.priority as 'low' | 'medium' | 'high'
       })) as DesignOrder[];
 
-      this.setCache(cacheKey, orders);
       console.log('Orders fetched successfully:', orders.length);
       return orders;
     } catch (error) {
@@ -80,10 +76,7 @@ export class OrderService extends CacheService {
 
   async getAllOrders(): Promise<DesignOrder[]> {
     try {
-      const cacheKey = 'all_orders';
-      const cached = this.getFromCache(cacheKey);
-      if (cached) return cached;
-
+      // Skip cache for now to ensure fresh data
       console.log('Fetching all orders');
       
       const { data, error } = await supabase
@@ -102,7 +95,6 @@ export class OrderService extends CacheService {
         priority: order.priority as 'low' | 'medium' | 'high'
       })) as DesignOrder[];
 
-      this.setCache(cacheKey, orders);
       console.log('All orders fetched successfully:', orders.length);
       return orders;
     } catch (error) {
@@ -124,8 +116,8 @@ export class OrderService extends CacheService {
 
       if (!error) {
         console.log('Order status updated successfully');
-        this.clearCache('orders');
-        this.clearCache('statistics');
+        // Clear all cache to ensure fresh data
+        this.clearAllCache();
       }
 
       return { data: data as DesignOrder, error };
@@ -144,7 +136,8 @@ export class OrderService extends CacheService {
         .single();
 
       if (!error) {
-        this.clearCache('orders');
+        // Clear all cache to ensure fresh data
+        this.clearAllCache();
       }
 
       return { data: data as DesignOrder, error };
@@ -161,8 +154,8 @@ export class OrderService extends CacheService {
         .eq('id', orderId);
 
       if (!error) {
-        this.clearCache('orders');
-        this.clearCache('statistics');
+        // Clear all cache to ensure fresh data
+        this.clearAllCache();
       }
 
       return { error };

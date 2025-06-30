@@ -1,10 +1,10 @@
 
-import { useState, useEffect } from 'react';
-import { DesignOrder, Profile } from '@/types/database';
+import { useState } from 'react';
+import { Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import ChatWindow from './chat/ChatWindow';
 import { useToast } from '@/hooks/use-toast';
-import { orderService } from '@/services/orders/orderService';
+import { useRealtimeOrders } from '@/hooks/useRealtimeOrders';
 import ClientHeader from './client/ClientHeader';
 import ClientStats from './client/ClientStats';
 import ClientOrdersList from './client/ClientOrdersList';
@@ -15,40 +15,31 @@ interface ClientDashboardProps {
 }
 
 const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
-  const [orders, setOrders] = useState<DesignOrder[]>([]);
   const [isCreateOrderOpen, setIsCreateOrderOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    loadOrders();
-  }, [user.id]);
+  // Use real-time orders hook
+  const { orders, isLoading, error, refetch } = useRealtimeOrders({
+    user,
+    subscriptionId: `client-${user.id}`
+  });
 
-  const loadOrders = async () => {
-    setIsLoading(true);
-    try {
-      const userOrders = await orderService.getOrdersByClientId(user.id);
-      console.log('Loaded client orders:', userOrders.length);
-      setOrders(userOrders);
-    } catch (error) {
-      console.error('Error loading orders:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في تحميل الطلبات",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Show error if exists
+  if (error) {
+    toast({
+      title: "خطأ",
+      description: error,
+      variant: "destructive"
+    });
+  }
 
   const handleOrderCreated = () => {
     setIsCreateOrderOpen(false);
-    loadOrders();
+    refetch(); // Refresh orders after creating new one
     toast({
       title: "تم إنشاء الطلب",
-      description: "تم إنشاء طلب التصميم بنجاح"
+      description: "تم إنشاء طلب التصميم بنجاح وسيصل للمصممين فوراً"
     });
   };
 
