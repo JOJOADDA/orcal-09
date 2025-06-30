@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabaseService } from '@/services/supabaseService';
 import { Profile } from '@/types/database';
