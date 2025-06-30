@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,69 +27,90 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   });
   const { toast } = useToast();
 
-  const validateEmail = (email: string) => /\S+@\S+\.\S+/.test(email);
-  const validatePhone = (phone: string) => /^\+249[0-9]{9}$/.test(phone);
+  // Memoized validation functions
+  const validateEmail = useCallback((email: string) => /\S+@\S+\.\S+/.test(email), []);
+  const validatePhone = useCallback((phone: string) => /^\+249[0-9]{9}$/.test(phone), []);
 
-  const detectIdentifierType = (identifier: string): 'phone' | 'email' => {
-    if (identifier.includes('@')) return 'email';
-    return 'phone';
-  };
+  const detectIdentifierType = useCallback((identifier: string): 'phone' | 'email' => {
+    return identifier.includes('@') ? 'email' : 'phone';
+  }, []);
 
-  const formatPhoneNumber = (phone: string) => {
+  const formatPhoneNumber = useCallback((phone: string) => {
     let cleaned = phone.replace(/[^\d+]/g, '');
     
-    if (cleaned.startsWith('+249')) {
-      return cleaned;
-    }
-    
-    if (cleaned.startsWith('249')) {
-      return '+' + cleaned;
-    }
-    
-    if (cleaned.startsWith('0')) {
-      return '+249' + cleaned.substring(1);
-    }
-    
-    if (cleaned.length === 9 && /^\d{9}$/.test(cleaned)) {
-      return '+249' + cleaned;
-    }
+    if (cleaned.startsWith('+249')) return cleaned;
+    if (cleaned.startsWith('249')) return '+' + cleaned;
+    if (cleaned.startsWith('0')) return '+249' + cleaned.substring(1);
+    if (cleaned.length === 9 && /^\d{9}$/.test(cleaned)) return '+249' + cleaned;
     
     return cleaned;
-  };
+  }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  // Memoized form validation
+  const loginValidation = useMemo(() => {
     const identifierType = detectIdentifierType(loginData.identifier);
     
-    if (identifierType === 'email' && !validateEmail(loginData.identifier)) {
+    if (identifierType === 'email') {
+      return {
+        isValid: validateEmail(loginData.identifier) && loginData.password.length >= 6,
+        error: !validateEmail(loginData.identifier) ? 'بريد إلكتروني غير صحيح' : 
+               loginData.password.length < 6 ? 'كلمة المرور قصيرة جداً' : null
+      };
+    } else {
+      const formatted = formatPhoneNumber(loginData.identifier);
+      return {
+        isValid: validatePhone(formatted) && loginData.password.length >= 6,
+        error: !validatePhone(formatted) ? 'رقم هاتف غير صحيح' :
+               loginData.password.length < 6 ? 'كلمة المرور قصيرة جداً' : null
+      };
+    }
+  }, [loginData, detectIdentifierType, validateEmail, validatePhone, formatPhoneNumber]);
+
+  const signupValidation = useMemo(() => {
+    const identifierType = detectIdentifierType(signupData.identifier);
+    
+    const checks = {
+      name: signupData.name.trim().length >= 2,
+      identifier: identifierType === 'email' ? 
+        validateEmail(signupData.identifier) : 
+        validatePhone(formatPhoneNumber(signupData.identifier)),
+      password: signupData.password.length >= 6,
+      confirmPassword: signupData.password === signupData.confirmPassword
+    };
+
+    return {
+      isValid: Object.values(checks).every(Boolean),
+      errors: {
+        name: !checks.name ? 'الاسم يجب أن يكون حرفين على الأقل' : null,
+        identifier: !checks.identifier ? 
+          (identifierType === 'email' ? 'بريد إلكتروني غير صحيح' : 'رقم هاتف غير صحيح') : null,
+        password: !checks.password ? 'كلمة المرور يجب أن تكون 6 أحرف على الأقل' : null,
+        confirmPassword: !checks.confirmPassword ? 'كلمات المرور غير متطابقة' : null
+      }
+    };
+  }, [signupData, detectIdentifierType, validateEmail, validatePhone, formatPhoneNumber]);
+
+  // Optimized login handler
+  const handleLogin = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!loginValidation.isValid) {
       toast({
-        title: "خطأ في البريد الإلكتروني",
-        description: "يرجى إدخال بريد إلكتروني صحيح",
+        title: "خطأ في البيانات",
+        description: loginValidation.error,
         variant: "destructive"
       });
       return;
     }
 
-    if (identifierType === 'phone') {
-      const formattedPhone = formatPhoneNumber(loginData.identifier);
-      if (!validatePhone(formattedPhone)) {
-        toast({
-          title: "خطأ في رقم الهاتف",
-          description: "يرجى إدخال رقم هاتف صحيح بالمفتاح الدولي +249",
-          variant: "destructive"
-        });
-        return;
-      }
-    }
+    const identifierType = detectIdentifierType(loginData.identifier);
+    const identifier = identifierType === 'email' ? 
+      loginData.identifier : 
+      formatPhoneNumber(loginData.identifier);
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabaseService.signIn(
-        identifierType === 'email' ? loginData.identifier : formatPhoneNumber(loginData.identifier),
-        loginData.password,
-        identifierType
-      );
+      const { data, error } = await supabaseService.signIn(identifier, loginData.password, identifierType);
       
       if (error) {
         let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
@@ -129,52 +150,34 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [loginData, loginValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
 
-  const handleSignup = async (e: React.FormEvent) => {
+  // Optimized signup handler
+  const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!signupData.name.trim()) {
-      toast({ title: "خطأ", description: "يرجى إدخال الاسم الكامل", variant: "destructive" });
+    if (!signupValidation.isValid) {
+      const firstError = Object.values(signupValidation.errors).find(Boolean);
+      toast({ 
+        title: "خطأ في البيانات", 
+        description: firstError, 
+        variant: "destructive" 
+      });
       return;
     }
 
     const identifierType = detectIdentifierType(signupData.identifier);
-    
-    if (identifierType === 'email' && !validateEmail(signupData.identifier)) {
-      toast({ title: "خطأ", description: "يرجى إدخال بريد إلكتروني صحيح", variant: "destructive" });
-      return;
-    }
-
-    if (identifierType === 'phone') {
-      const formattedPhone = formatPhoneNumber(signupData.identifier);
-      if (!validatePhone(formattedPhone)) {
-        toast({ 
-          title: "خطأ", 
-          description: "يرجى إدخال رقم هاتف صحيح بالمفتاح الدولي +249", 
-          variant: "destructive" 
-        });
-        return;
-      }
-    }
-
-    if (signupData.password.length < 6) {
-      toast({ title: "خطأ", description: "كلمة المرور يجب أن تكون 6 أحرف على الأقل", variant: "destructive" });
-      return;
-    }
-
-    if (signupData.password !== signupData.confirmPassword) {
-      toast({ title: "خطأ", description: "كلمتا المرور غير متطابقتين", variant: "destructive" });
-      return;
-    }
+    const identifier = identifierType === 'email' ? 
+      signupData.identifier : 
+      formatPhoneNumber(signupData.identifier);
 
     setIsLoading(true);
     try {
       const { data, error } = await supabaseService.signUp(
-        identifierType === 'email' ? signupData.identifier : formatPhoneNumber(signupData.identifier),
+        identifier,
         signupData.password,
         signupData.name,
-        identifierType === 'phone' ? formatPhoneNumber(signupData.identifier) : ''
+        identifierType === 'phone' ? identifier : ''
       );
 
       if (error) {
@@ -211,13 +214,17 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       }
     } catch (error) {
       console.error('Signup error:', error);
-      toast({ title: "خطأ", description: "حدث خطأ أثناء إنشاء الحساب", variant: "destructive" });
+      toast({ 
+        title: "خطأ", 
+        description: "حدث خطأ أثناء إنشاء الحساب", 
+        variant: "destructive" 
+      });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [signupData, signupValidation, detectIdentifierType, formatPhoneNumber, toast, onAuthSuccess]);
 
-  const resendConfirmation = async () => {
+  const resendConfirmation = useCallback(async () => {
     if (signupData.identifier && validateEmail(signupData.identifier)) {
       setIsLoading(true);
       try {
@@ -234,7 +241,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         setIsLoading(false);
       }
     }
-  };
+  }, [signupData.identifier, validateEmail, toast]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
@@ -245,6 +252,11 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
               src="/lovable-uploads/b49e08ca-b8a4-4464-9301-2cac70b76214.png" 
               alt="أوركال للدعاية والإعلان" 
               className="w-24 h-24 object-contain mb-4"
+              loading="eager"
+              onError={(e) => {
+                console.error('Logo failed to load');
+                e.currentTarget.style.display = 'none';
+              }}
             />
             <div>
               <CardTitle className="text-2xl font-bold text-gray-900 mb-2">أوركال للدعاية والإعلان</CardTitle>
@@ -291,6 +303,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     placeholder="example@email.com أو +249123456789"
                     required
                     disabled={isLoading}
+                    className={!loginValidation.isValid && loginData.identifier ? 'border-red-300' : ''}
                   />
                 </div>
 
@@ -305,6 +318,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                       placeholder="********"
                       required
                       disabled={isLoading}
+                      className={!loginValidation.isValid && loginData.password ? 'border-red-300' : ''}
                     />
                     <Button
                       type="button"
@@ -319,7 +333,11 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                   </div>
                 </div>
 
-                <Button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || !loginValidation.isValid} 
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:opacity-50"
+                >
                   {isLoading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
                 </Button>
               </form>
@@ -339,6 +357,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, name: e.target.value })}
                     disabled={isLoading}
                     required
+                    className={signupValidation.errors.name ? 'border-red-300' : ''}
                   />
                 </div>
 
@@ -355,6 +374,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, identifier: e.target.value })}
                     disabled={isLoading}
                     required
+                    className={signupValidation.errors.identifier ? 'border-red-300' : ''}
                   />
                   <p className="text-xs text-gray-500">
                     أدخل رقم الهاتف بالمفتاح الدولي +249 أو بريد إلكتروني صحيح
@@ -371,6 +391,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, password: e.target.value })}
                     disabled={isLoading}
                     required
+                    className={signupValidation.errors.password ? 'border-red-300' : ''}
                   />
                 </div>
 
@@ -384,10 +405,15 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
                     onChange={(e) => setSignupData({ ...signupData, confirmPassword: e.target.value })}
                     disabled={isLoading}
                     required
+                    className={signupValidation.errors.confirmPassword ? 'border-red-300' : ''}
                   />
                 </div>
 
-                <Button type="submit" disabled={isLoading} className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700">
+                <Button 
+                  type="submit" 
+                  disabled={isLoading || !signupValidation.isValid} 
+                  className="w-full bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 disabled:opacity-50"
+                >
                   {isLoading ? 'جاري التسجيل...' : 'إنشاء الحساب'}
                 </Button>
               </form>
