@@ -5,6 +5,7 @@ import CreateOrderDialog from './CreateOrderDialog';
 import ChatWindow from './chat/ChatWindow';
 import { useToast } from '@/hooks/use-toast';
 import { orderService } from '@/services/orders/orderService';
+import { realTimeSyncService } from '@/services/realTimeSync';
 import ClientHeader from './client/ClientHeader';
 import ClientStats from './client/ClientStats';
 import ClientOrdersList from './client/ClientOrdersList';
@@ -23,7 +24,58 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
 
   useEffect(() => {
     loadOrders();
-  }, [user.id]);
+    
+    // الاشتراك في التحديثات الفورية للطلبات
+    const unsubscribeOrders = realTimeSyncService.subscribeToOrderUpdates((updatedOrder) => {
+      // تحديث الطلب إذا كان للعميل الحالي
+      if (updatedOrder.client_id === user.id) {
+        setOrders(prev => {
+          const existingIndex = prev.findIndex(order => order.id === updatedOrder.id);
+          if (existingIndex >= 0) {
+            const newOrders = [...prev];
+            newOrders[existingIndex] = updatedOrder;
+            return newOrders;
+          } else {
+            return [updatedOrder, ...prev];
+          }
+        });
+
+        // إشعار العميل بالتحديث
+        if (updatedOrder.status === 'in-progress') {
+          toast({
+            title: "تحديث الطلب",
+            description: "بدأ المصمم في تنفيذ طلبك"
+          });
+        } else if (updatedOrder.status === 'completed') {
+          toast({
+            title: "تحديث الطلب",
+            description: "تم إكمال تصميمك"
+          });
+        } else if (updatedOrder.status === 'delivered') {
+          toast({
+            title: "تحديث الطلب",
+            description: "تم تسليم التصميم"
+          });
+        }
+      }
+    });
+
+    // الاشتراك في الرسائل الجديدة
+    const unsubscribeMessages = realTimeSyncService.subscribeToAllMessages((message) => {
+      const userOrder = orders.find(order => order.id === message.order_id);
+      if (userOrder && message.sender_id !== user.id) {
+        toast({
+          title: "رسالة جديدة",
+          description: `رسالة جديدة في طلب: ${userOrder.design_type}`
+        });
+      }
+    });
+
+    return () => {
+      if (unsubscribeOrders) unsubscribeOrders();
+      if (unsubscribeMessages) unsubscribeMessages();
+    };
+  }, [user.id, orders]);
 
   const loadOrders = async () => {
     setIsLoading(true);

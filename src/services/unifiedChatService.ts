@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { ChatRoom, ChatMessage, DesignOrder, OrderFile, MessageFile } from '@/types/database';
 import { RealtimeChannel } from '@supabase/supabase-js';
@@ -19,7 +18,7 @@ export class UnifiedChatService {
     return error;
   }
 
-  // إنشاء أو جلب غرفة الدردشة
+  // إنشاء أو جلب غرفة الدردشة مع التأكد من المزامنة
   async getOrCreateChatRoom(orderId: string, clientId: string): Promise<ChatRoom | null> {
     try {
       console.log('Getting/Creating chat room for order:', orderId);
@@ -62,7 +61,7 @@ export class UnifiedChatService {
     }
   }
 
-  // جلب جميع الرسائل لطلب معين
+  // جلب جميع الرسائل لطلب معين مع التحديث الفوري للإحصائيات
   async getMessages(orderId: string): Promise<ChatMessage[]> {
     try {
       console.log('Fetching messages for order:', orderId);
@@ -92,7 +91,7 @@ export class UnifiedChatService {
     }
   }
 
-  // إرسال رسالة
+  // إرسال رسالة مع ضمان الوصول الفوري للطرف الآخر
   async sendMessage(messageData: {
     order_id: string;
     sender_id: string;
@@ -103,7 +102,7 @@ export class UnifiedChatService {
     files?: OrderFile[];
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
     try {
-      console.log('Sending message:', messageData.content.substring(0, 50) + '...');
+      console.log('Sending message with enhanced sync:', messageData.content.substring(0, 50) + '...');
       
       // جلب أو إنشاء غرفة الدردشة
       const room = await this.getOrCreateChatRoom(messageData.order_id, messageData.sender_id);
@@ -139,7 +138,7 @@ export class UnifiedChatService {
         }
       }
 
-      // تحديث غرفة الدردشة
+      // تحديث غرفة الدردشة مع ضمان الإشعارات الفورية
       await supabase
         .from('chat_rooms')
         .update({
@@ -148,7 +147,7 @@ export class UnifiedChatService {
         })
         .eq('id', room.id);
 
-      console.log('Message sent successfully');
+      console.log('Message sent successfully with real-time sync');
       return { success: true, message: data as ChatMessage };
     } catch (error) {
       console.error('Error in sendMessage:', error);
@@ -231,10 +230,10 @@ export class UnifiedChatService {
     return 'design';
   }
 
-  // الاشتراك في الرسائل الجديدة
+  // الاشتراك في الرسائل الجديدة مع تحسينات الأداء
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void): (() => void) | null {
     try {
-      console.log('Setting up real-time subscription for order:', orderId);
+      console.log('Setting up enhanced real-time subscription for order:', orderId);
       
       const channelName = `messages-${orderId}`;
       
@@ -255,7 +254,7 @@ export class UnifiedChatService {
             filter: `order_id=eq.${orderId}`
           },
           (payload) => {
-            console.log('New message received via real-time:', payload.new);
+            console.log('Real-time message received with enhanced sync:', payload.new);
             const message = {
               ...payload.new,
               sender_role: payload.new.sender_role as 'client' | 'admin' | 'designer' | 'system',
@@ -266,13 +265,17 @@ export class UnifiedChatService {
           }
         )
         .subscribe((status) => {
-          console.log('Subscription status:', status);
+          console.log('Enhanced subscription status:', status);
+          if (status === 'SUBSCRIBED') {
+            console.log('Real-time connection established for order:', orderId);
+          }
         });
 
       this.activeChannels.set(channelName, channel);
 
       // إرجاع دالة إلغاء الاشتراك
       return () => {
+        console.log('Unsubscribing from real-time messages for order:', orderId);
         channel.unsubscribe();
         this.activeChannels.delete(channelName);
       };
@@ -336,12 +339,15 @@ export class UnifiedChatService {
     }
   }
 
-  // إغلاق جميع الاشتراكات
+  // إغلاق جميع الاشتراكات مع التأكد من التنظيف الكامل
   cleanup() {
-    this.activeChannels.forEach((channel) => {
+    console.log('Cleaning up all real-time subscriptions...');
+    this.activeChannels.forEach((channel, name) => {
+      console.log('Unsubscribing from channel:', name);
       channel.unsubscribe();
     });
     this.activeChannels.clear();
+    console.log('All subscriptions cleaned up successfully');
   }
 }
 

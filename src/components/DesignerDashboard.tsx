@@ -5,6 +5,7 @@ import ChatWindow from './chat/ChatWindow';
 import { useToast } from '@/hooks/use-toast';
 import { unifiedChatService } from '@/services/unifiedChatService';
 import { orderService } from '@/services/orders/orderService';
+import { realTimeSyncService } from '@/services/realTimeSync';
 import DesignerHeader from './designer/DesignerHeader';
 import DesignerStats from './designer/DesignerStats';
 import OrdersList from './designer/OrdersList';
@@ -33,13 +34,48 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
 
   useEffect(() => {
     loadOrders();
-  }, []);
+    
+    // الاشتراك في التحديثات الفورية للطلبات
+    const unsubscribeOrders = realTimeSyncService.subscribeToOrderUpdates((updatedOrder) => {
+      setOrders(prev => {
+        const existingIndex = prev.findIndex(order => order.id === updatedOrder.id);
+        if (existingIndex >= 0) {
+          const newOrders = [...prev];
+          newOrders[existingIndex] = updatedOrder;
+          return newOrders;
+        } else {
+          return [updatedOrder, ...prev];
+        }
+      });
+
+      console.log('Designer received order update:', updatedOrder);
+    });
+
+    // الاشتراك في الرسائل الجديدة من العملاء
+    const unsubscribeMessages = realTimeSyncService.subscribeToAllMessages((message) => {
+      // إشعار المصمم بالرسائل الجديدة من العملاء
+      if (message.sender_role === 'client') {
+        const orderForMessage = orders.find(order => order.id === message.order_id);
+        if (orderForMessage) {
+          toast({
+            title: "رسالة جديدة من العميل",
+            description: `رسالة في طلب: ${orderForMessage.design_type}`
+          });
+        }
+      }
+    });
+
+    return () => {
+      if (unsubscribeOrders) unsubscribeOrders();
+      if (unsubscribeMessages) unsubscribeMessages();
+    };
+  }, [orders]);
 
   const loadOrders = async () => {
     setIsLoading(true);
     try {
       const allOrders = await orderService.getAllOrders();
-      console.log('Loaded orders:', allOrders.length);
+      console.log('Loaded orders for designer:', allOrders.length);
       setOrders(allOrders);
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -71,6 +107,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
         return statusMap[status];
       };
 
+      // إرسال إشعار للعميل
       await unifiedChatService.sendMessage({
         order_id: orderId,
         sender_id: 'system',
@@ -80,10 +117,9 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
         message_type: 'system'
       });
 
-      await loadOrders();
       toast({
         title: "تم التحديث",
-        description: "تم تحديث حالة الطلب بنجاح"
+        description: "تم تحديث حالة الطلب وإشعار العميل"
       });
     } catch (error) {
       console.error('Error updating order status:', error);
