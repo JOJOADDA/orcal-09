@@ -14,11 +14,19 @@ export const useAuthState = () => {
     
     try {
       if (session?.user) {
+        // محاولة الحصول على الملف الشخصي
         let profile = await supabaseService.getProfile(session.user.id);
         
-        // إذا لم يكن هناك profile، قم بإنشاء واحد
+        // إذا لم يكن هناك profile، انتظر قليلاً ثم حاول مرة أخرى
         if (!profile) {
-          console.log('No profile found, creating one...');
+          console.log('Profile not found, waiting and retrying...');
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          profile = await supabaseService.getProfile(session.user.id);
+        }
+        
+        // إذا لم يزل غير موجود، قم بإنشاء واحد
+        if (!profile) {
+          console.log('Creating profile for user:', session.user.id);
           const userData = session.user.user_metadata || {};
           const { data: newProfile } = await supabaseService.createProfile(
             session.user.id,
@@ -40,6 +48,7 @@ export const useAuthState = () => {
           setIsAuthenticated(false);
         }
       } else {
+        console.log('No session found, user not authenticated');
         setCurrentUser(null);
         setIsAuthenticated(false);
       }
@@ -48,51 +57,51 @@ export const useAuthState = () => {
       setCurrentUser(null);
       setIsAuthenticated(false);
     } finally {
-      // تأكد من إيقاف التحميل الأولي في جميع الحالات
       setIsInitializing(false);
     }
   }, []);
 
   useEffect(() => {
-    let isSubscribed = true;
-    let timeoutId: NodeJS.Timeout;
+    let isMounted = true;
 
-    // إضافة timeout للتأكد من عدم التعليق في حالة التحميل
-    const initializationTimeout = setTimeout(() => {
-      if (isSubscribed) {
+    // إعداد مهلة زمنية للتأكد من عدم التعليق
+    const initTimeout = setTimeout(() => {
+      if (isMounted) {
         console.warn('Authentication initialization timeout');
         setIsInitializing(false);
       }
-    }, 5000); // 5 ثوان timeout
+    }, 8000);
 
+    // الاستماع لتغييرات حالة المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        if (isSubscribed) {
-          clearTimeout(initializationTimeout);
+        if (isMounted) {
+          clearTimeout(initTimeout);
           handleAuthStateChange(event, session);
         }
       }
     );
 
+    // التحقق من الجلسة الحالية
     const checkCurrentSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
           console.error('Error getting session:', error);
-          if (isSubscribed) {
+          if (isMounted) {
             setIsInitializing(false);
           }
           return;
         }
 
-        if (isSubscribed) {
-          clearTimeout(initializationTimeout);
+        if (isMounted) {
+          clearTimeout(initTimeout);
           await handleAuthStateChange('INITIAL_SESSION', session);
         }
       } catch (error) {
         console.error('Error checking session:', error);
-        if (isSubscribed) {
+        if (isMounted) {
           setIsInitializing(false);
         }
       }
@@ -101,8 +110,8 @@ export const useAuthState = () => {
     checkCurrentSession();
 
     return () => {
-      isSubscribed = false;
-      clearTimeout(initializationTimeout);
+      isMounted = false;
+      clearTimeout(initTimeout);
       subscription.unsubscribe();
     };
   }, [handleAuthStateChange]);
@@ -124,6 +133,7 @@ export const useAuthState = () => {
       setCurrentUser(null);
       setIsAuthenticated(false);
       supabaseService.clearAllCache();
+      console.log('User logged out successfully');
     } catch (error) {
       console.error('Error during logout:', error);
       setCurrentUser(null);

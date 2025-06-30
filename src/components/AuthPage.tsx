@@ -106,33 +106,27 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
     setIsLoading(true);
     
-    // إضافة timeout للتأكد من عدم التعليق
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "خطأ في الاتصال",
-        description: "تم انتهاء وقت الانتظار. يرجى المحاولة مرة أخرى.",
-        variant: "destructive"
-      });
-    }, 15000); // 15 ثانية timeout
-    
     try {
       console.log('Starting login process...');
-      const { data, error } = await supabaseService.signIn(identifier, loginData.password, identifierType);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Login timeout')), 10000)
+      );
       
-      clearTimeout(timeoutId);
+      const loginPromise = supabaseService.signIn(identifier, loginData.password, identifierType);
+      
+      const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
       
       if (error) {
         console.error('Login error:', error);
         let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
         
-        if (error.message.includes('Email not confirmed')) {
+        if (error.message?.includes('Email not confirmed')) {
           errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً. تحقق من صندوق الوارد الخاص بك.";
-        } else if (error.message.includes('Invalid login credentials')) {
+        } else if (error.message?.includes('Invalid login credentials')) {
           errorMessage = identifierType === 'email' 
             ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
             : "رقم الهاتف أو كلمة المرور غير صحيحة";
-        } else if (error.message.includes('Too many requests')) {
+        } else if (error.message?.includes('Too many requests')) {
           errorMessage = "تم إرسال طلبات كثيرة. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.";
         }
         
@@ -144,24 +138,29 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         console.log('Login successful:', data.user.id);
         toast({
           title: "تم تسجيل الدخول بنجاح!",
           description: "مرحباً بك في أوركال للدعاية والإعلان"
         });
         
-        // Wait a moment for the auth state to update
+        // انتظار قصير للسماح بتحديث حالة المصادقة
         setTimeout(() => {
           onAuthSuccess();
-        }, 500);
+        }, 1000);
       }
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.error('Login error:', error);
+    } catch (error: any) {
+      console.error('Login exception:', error);
+      let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
+      
+      if (error.message === 'Login timeout') {
+        errorMessage = "انتهت مهلة تسجيل الدخول. يرجى المحاولة مرة أخرى.";
+      }
+      
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء تسجيل الدخول",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -189,38 +188,33 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
 
     setIsLoading(true);
     
-    const timeoutId = setTimeout(() => {
-      setIsLoading(false);
-      toast({
-        title: "خطأ في الاتصال",
-        description: "تم انتهاء وقت الانتظار. يرجى المحاولة مرة أخرى.",
-        variant: "destructive"
-      });
-    }, 15000);
-    
     try {
       console.log('Starting signup process...');
-      const { data, error } = await supabaseService.signUp(
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Signup timeout')), 15000)
+      );
+      
+      const signupPromise = supabaseService.signUp(
         identifier,
         signupData.password,
         signupData.name,
         identifierType === 'phone' ? identifier : ''
       );
-
-      clearTimeout(timeoutId);
+      
+      const { data, error } = await Promise.race([signupPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('Signup error:', error);
         let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
         
-        if (error.message.includes('User already registered') || 
-            error.message.includes('already exists')) {
+        if (error.message?.includes('User already registered') || 
+            error.message?.includes('already exists')) {
           errorMessage = "هذا الحساب مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من ذلك.";
-        } else if (error.message.includes('Password should be at least 6 characters')) {
+        } else if (error.message?.includes('Password should be at least 6 characters')) {
           errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
-        } else if (error.message.includes('Invalid email')) {
+        } else if (error.message?.includes('Invalid email')) {
           errorMessage = "البريد الإلكتروني غير صحيح";
-        } else if (error.message.includes('duplicate key')) {
+        } else if (error.message?.includes('duplicate key')) {
           errorMessage = "هذا البريد الإلكتروني مستخدم مسبقاً";
         }
         
@@ -232,7 +226,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         console.log('Signup successful:', data.user.id);
         if (identifierType === 'email') {
           setEmailSent(true);
@@ -245,15 +239,20 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
             title: "تم إنشاء الحساب بنجاح!",
             description: "مرحباً بك في أوركال للدعاية والإعلان"
           });
-          setTimeout(() => onAuthSuccess(), 1000);
+          setTimeout(() => onAuthSuccess(), 1500);
         }
       }
-    } catch (error) {
-      clearTimeout(timeoutId);
-      console.error('Signup error:', error);
+    } catch (error: any) {
+      console.error('Signup exception:', error);
+      let errorMessage = "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.";
+      
+      if (error.message === 'Signup timeout') {
+        errorMessage = "انتهت مهلة إنشاء الحساب. يرجى المحاولة مرة أخرى.";
+      }
+      
       toast({ 
         title: "خطأ", 
-        description: "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.", 
+        description: errorMessage, 
         variant: "destructive" 
       });
     } finally {
