@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -243,42 +244,6 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
       </Card>
     </div>
   );
-};
-
-const getStatusColor = (status: DesignOrder['status']) => {
-  const colors = {
-    'pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    'in-progress': 'bg-blue-100 text-blue-800 border-blue-200',
-    'completed': 'bg-green-100 text-green-800 border-green-200',
-    'delivered': 'bg-purple-100 text-purple-800 border-purple-200'
-  };
-  return colors[status];
-};
-
-const getStatusText = (status: DesignOrder['status']) => {
-  const statusMap = {
-    'pending': 'قيد الانتظار',
-    'in-progress': 'جاري التنفيذ',
-    'completed': 'مكتمل',
-    'delivered': 'تم التسليم'
-  };
-  return statusMap[status];
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return '0 Bytes';
-  const k = 1024;
-  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-};
-
-const getFileIcon = (fileName: string) => {
-  const extension = fileName.split('.').pop()?.toLowerCase();
-  if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension || '')) {
-    return <Image className="w-4 h-4 text-blue-500" />;
-  }
-  return <File className="w-4 h-4 text-gray-500" />;
 };
 
 export default ChatWindow;
