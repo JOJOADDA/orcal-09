@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
 import ChatWindow from './chat/ChatWindow';
@@ -5,7 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 import { unifiedChatService } from '@/services/unifiedChatService';
 import { orderService } from '@/services/orders/orderService';
 import { realTimeSyncService } from '@/services/realTimeSync';
-import { supabase } from '@/integrations/supabase/client';
+import { DesignerProfileService } from '@/services/designers/designerProfileService';
 import DesignerHeader from './designer/DesignerHeader';
 import DesignerStats from './designer/DesignerStats';
 import OrdersList from './designer/OrdersList';
@@ -21,59 +22,25 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  // إنشاء ملف تعريف موحد للمصمم مع UUID صحيح
+  // إنشاء ملف تعريف موثوق للمصمم
   const [designerProfile, setDesignerProfile] = useState<any>(null);
 
   useEffect(() => {
     const initializeDesignerProfile = async () => {
       try {
-        // استخدام دالة قاعدة البيانات لإنشاء UUID صحيح
-        const { data: designerUUID, error } = await supabase.rpc('generate_designer_uuid', {
-          designer_name: designerData.name
-        });
-
-        if (error) {
-          console.error('Error generating designer UUID:', error);
-          // Fallback method
-          const nameHash = btoa(encodeURIComponent(designerData.name)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
-          const fallbackUUID = `00000000-0000-4000-8000-${nameHash.padEnd(12, '0')}`;
-          
-          setDesignerProfile({
-            id: fallbackUUID,
-            name: designerData.name,
-            phone: '+249123456789',
-            role: 'designer' as const,
-            avatar_url: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        } else {
-          setDesignerProfile({
-            id: designerUUID,
-            name: designerData.name,
-            phone: '+249123456789',
-            role: 'designer' as const,
-            avatar_url: null,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          });
-        }
-
-        console.log('Designer profile initialized:', { id: designerUUID || 'fallback', name: designerData.name });
+        console.log('Initializing designer profile for:', designerData.name);
+        
+        // إنشاء ملف تعريف المصمم باستخدام الخدمة الجديدة
+        const profile = await DesignerProfileService.createDesignerProfile(designerData.name);
+        setDesignerProfile(profile);
+        
+        console.log('Designer profile initialized successfully:', profile);
       } catch (error) {
         console.error('Error initializing designer profile:', error);
-        // Final fallback
-        const nameHash = btoa(encodeURIComponent(designerData.name)).replace(/[^a-zA-Z0-9]/g, '').substring(0, 8);
-        const fallbackUUID = `00000000-0000-4000-8000-${nameHash.padEnd(12, '0')}`;
-        
-        setDesignerProfile({
-          id: fallbackUUID,
-          name: designerData.name,
-          phone: '+249123456789',
-          role: 'designer' as const,
-          avatar_url: null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+        toast({
+          title: "خطأ",
+          description: "فشل في تهيئة ملف المصمم",
+          variant: "destructive"
         });
       }
     };

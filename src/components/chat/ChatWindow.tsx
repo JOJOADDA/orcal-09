@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -80,7 +79,8 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
     setIsLoading(true);
     
     try {
-      console.log('Sending message from user:', user.name, 'Role:', user.role);
+      console.log('Sending message from user:', user.name, 'Role:', user.role, 'ID:', user.id);
+      console.log('Message content:', newMessage);
       
       const result = await unifiedChatService.sendMessage({
         order_id: order.id,
@@ -156,6 +156,9 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
                 </span>
                 <span className="text-sm text-gray-500">
                   العميل: {order.client_name}
+                </span>
+                <span className="text-sm text-blue-600">
+                  أنت: {getRoleDisplayName(user.role)}
                 </span>
               </div>
             </div>
