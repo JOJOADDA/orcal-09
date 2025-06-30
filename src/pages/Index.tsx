@@ -77,7 +77,7 @@ const Index = () => {
 
   // تحسين شاشة التحميل - أبسط وأسرع
   if (isLoading) {
-    return (
+    null (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex flex-col items-center justify-center">
         <div className="text-center">
           <img 
