@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Profile, DesignOrder, OrderFile, ChatRoom, ChatMessage, MessageFile } from '@/types/database';
 
@@ -18,7 +17,8 @@ class SupabaseService {
           name,
           phone: isEmail ? phone : identifier,
           email: isEmail ? identifier : email
-        }
+        },
+        emailRedirectTo: `${window.location.origin}/`
       }
     });
 
@@ -62,6 +62,18 @@ class SupabaseService {
   async getCurrentSession() {
     const { data: { session } } = await supabase.auth.getSession();
     return session;
+  }
+
+  // إضافة دالة لإعادة إرسال رسالة التأكيد
+  async resendConfirmation(email: string) {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: `${window.location.origin}/`
+      }
+    });
+    return { error };
   }
 
   // Profile Management

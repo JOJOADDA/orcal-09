@@ -1,12 +1,14 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Lock, Eye, EyeOff, Phone, Mail } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Phone, Mail, AlertCircle, CheckCircle } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface AuthPageProps {
   onAuthSuccess: () => void;
@@ -15,13 +17,13 @@ interface AuthPageProps {
 const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
   const [loginData, setLoginData] = useState({ identifier: '', password: '' });
   const [signupData, setSignupData] = useState({ 
     name: '', 
     identifier: '', 
     password: '', 
-    confirmPassword: '',
-    identifierType: 'phone' as 'phone' | 'email'
+    confirmPassword: ''
   });
   const { toast } = useToast();
 
@@ -34,25 +36,20 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
   };
 
   const formatPhoneNumber = (phone: string) => {
-    // Remove any non-digit characters except +
     let cleaned = phone.replace(/[^\d+]/g, '');
     
-    // If it starts with +249, keep it as is
     if (cleaned.startsWith('+249')) {
       return cleaned;
     }
     
-    // If it starts with 249, add +
     if (cleaned.startsWith('249')) {
       return '+' + cleaned;
     }
     
-    // If it starts with 0, replace with +249
     if (cleaned.startsWith('0')) {
       return '+249' + cleaned.substring(1);
     }
     
-    // If it's just 9 digits, add +249
     if (cleaned.length === 9 && /^\d{9}$/.test(cleaned)) {
       return '+249' + cleaned;
     }
@@ -94,22 +91,34 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         identifierType
       );
       
-      if (error || !data.user) {
+      if (error) {
+        let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
+        
+        if (error.message.includes('Email not confirmed')) {
+          errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً. تحقق من صندوق الوارد الخاص بك.";
+        } else if (error.message.includes('Invalid login credentials')) {
+          errorMessage = identifierType === 'email' 
+            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+            : "رقم الهاتف أو كلمة المرور غير صحيحة";
+        } else if (error.message.includes('Too many requests')) {
+          errorMessage = "تم إرسال طلبات كثيرة. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.";
+        }
+        
         toast({
           title: "خطأ في تسجيل الدخول",
-          description: identifierType === 'email' 
-            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-            : "رقم الهاتف أو كلمة المرور غير صحيحة",
+          description: errorMessage,
           variant: "destructive"
         });
         return;
       }
 
-      toast({
-        title: "تم تسجيل الدخول بنجاح!",
-        description: "مرحباً بك في أوركال للدعاية والإعلان"
-      });
-      onAuthSuccess();
+      if (data.user) {
+        toast({
+          title: "تم تسجيل الدخول بنجاح!",
+          description: "مرحباً بك في أوركال للدعاية والإعلان"
+        });
+        onAuthSuccess();
+      }
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -168,21 +177,38 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         identifierType === 'phone' ? formatPhoneNumber(signupData.identifier) : ''
       );
 
-      if (error || !data.user) {
+      if (error) {
+        let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
+        
+        if (error.message.includes('User already registered')) {
+          errorMessage = "هذا الحساب مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من ذلك.";
+        } else if (error.message.includes('Password should be at least 6 characters')) {
+          errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+        }
+        
         toast({
           title: "فشل التسجيل",
-          description: error?.message || "حدث خطأ أثناء إنشاء الحساب",
+          description: errorMessage,
           variant: "destructive"
         });
         return;
       }
 
-      toast({
-        title: "تم إنشاء الحساب بنجاح!",
-        description: "تم تسجيل الدخول تلقائياً. مرحباً بك في أوركال"
-      });
-
-      setTimeout(() => onAuthSuccess(), 1000);
+      if (data.user) {
+        if (identifierType === 'email') {
+          setEmailSent(true);
+          toast({
+            title: "تم إرسال رسالة التأكيد!",
+            description: "يرجى التحقق من بريدك الإلكتروني وتأكيد الحساب لتسجيل الدخول"
+          });
+        } else {
+          toast({
+            title: "تم إنشاء الحساب بنجاح!",
+            description: "تم تسجيل الدخول تلقائياً. مرحباً بك في أوركال"
+          });
+          setTimeout(() => onAuthSuccess(), 1000);
+        }
+      }
     } catch (error) {
       console.error('Signup error:', error);
       toast({ title: "خطأ", description: "حدث خطأ أثناء إنشاء الحساب", variant: "destructive" });
@@ -191,18 +217,55 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     }
   };
 
+  // دالة لإعادة إرسال رسالة التأكيد
+  const resendConfirmation = async () => {
+    if (signupData.identifier && validateEmail(signupData.identifier)) {
+      setIsLoading(true);
+      try {
+        const { error } = await supabaseService.resendConfirmation(signupData.identifier);
+        if (!error) {
+          toast({
+            title: "تم إرسال رسالة التأكيد!",
+            description: "يرجى التحقق من بريدك الإلكتروني"
+          });
+        }
+      } catch (error) {
+        console.error('Resend confirmation error:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
         <CardHeader className="text-center space-y-4">
           <img 
-            src="/lovable-uploads/ae8abee5-6225-4fe3-97be-58a1b8c1d4b0.png" 
+            src="/lovable-uploads/8055916a-7d46-495d-9a13-7790805c3b44.png" 
             alt="أوركال للدعاية والإعلان" 
             className="w-20 h-20 mx-auto object-contain"
           />
           <CardTitle className="text-2xl font-bold text-gray-900">أوركال للدعاية والإعلان</CardTitle>
         </CardHeader>
         <CardContent>
+          {emailSent && (
+            <Alert className="mb-4">
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>
+                تم إرسال رسالة التأكيد إلى بريدك الإلكتروني. يرجى التحقق من صندوق الوارد والنقر على رابط التأكيد.
+                <Button 
+                  variant="link" 
+                  className="p-0 h-auto font-normal text-blue-600 underline mr-2"
+                  onClick={resendConfirmation}
+                  disabled={isLoading}
+                >
+                  إعادة إرسال رسالة التأكيد
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
           <Tabs defaultValue="login" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-6">
               <TabsTrigger value="login">تسجيل الدخول</TabsTrigger>
