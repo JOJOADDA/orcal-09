@@ -4,12 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 export class AuthService {
   private handleError(error: any, context: string) {
     console.error(`[${context}] Error:`, error);
-    
-    // إرسال تفاصيل الخطأ للمطور
-    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
-      // Send to error tracking service
-    }
-    
     return error;
   }
 
@@ -39,11 +33,9 @@ export class AuthService {
         return { data: null, error };
       }
 
-      if (data.user) {
-        console.log('Client signup successful for user:', data.user.id);
-        
-        // انتظار قصير للتأكد من إنشاء الملف الشخصي
-        await new Promise(resolve => setTimeout(resolve, 1000));
+      if (data.user && !isEmail) {
+        // للحسابات غير البريدية، لا نحتاج انتظار تأكيد
+        console.log('Phone signup successful for user:', data.user.id);
       }
 
       return { data, error: null };
@@ -75,26 +67,6 @@ export class AuthService {
 
       if (data.user) {
         console.log('SignIn successful for user:', data.user.id);
-        
-        // التحقق من وجود الملف الشخصي وإنشاؤه إذا لم يكن موجوداً
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        if (!profile) {
-          console.log('Creating missing profile for user:', data.user.id);
-          const userData = data.user.user_metadata || {};
-          await supabase
-            .from('profiles')
-            .insert({
-              id: data.user.id,
-              name: userData.name || 'مستخدم جديد',
-              phone: userData.phone || '',
-              role: userData.role || 'client'
-            });
-        }
       }
 
       return { data, error: null };

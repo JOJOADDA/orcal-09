@@ -32,34 +32,25 @@ const Index = () => {
 
   const [forceRender, setForceRender] = useState(false);
 
-  // Force render after a timeout to prevent infinite loading
+  // تقليل وقت انتظار force render إلى ثانيتين فقط
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (isInitializing) {
         console.warn('Forcing render due to initialization timeout');
         setForceRender(true);
       }
-    }, 3000);
+    }, 2000); // تقليل من 3 إلى 2 ثانية
 
     return () => clearTimeout(timeout);
   }, [isInitializing]);
 
-  // Show loading skeleton only during initial authentication check and not forced
+  // عرض شاشة تحميل مبسطة ولفترة قصيرة فقط
   if (isInitializing && !forceRender) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-md space-y-4">
-          <div className="text-center">
-            <Skeleton className="w-24 h-24 mx-auto mb-4 rounded-full" />
-            <Skeleton className="h-8 w-48 mx-auto mb-2" />
-            <Skeleton className="h-4 w-32 mx-auto" />
-          </div>
-          <div className="bg-white/95 backdrop-blur-sm shadow-2xl rounded-lg p-6 space-y-4">
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-10 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600">جاري تحميل الموقع...</p>
         </div>
       </div>
     );

@@ -15,18 +15,14 @@ export const useAuthState = () => {
     try {
       if (session?.user) {
         // محاولة الحصول على الملف الشخصي
-        let profile = await supabaseService.getProfile(session.user.id);
+        const profile = await supabaseService.getProfile(session.user.id);
         
-        // إذا لم يكن هناك profile، انتظر قليلاً ثم حاول مرة أخرى
-        if (!profile) {
-          console.log('Profile not found, waiting and retrying...');
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          profile = await supabaseService.getProfile(session.user.id);
-        }
-        
-        // إذا لم يزل غير موجود، قم بإنشاء واحد
-        if (!profile) {
-          console.log('Creating profile for user:', session.user.id);
+        if (profile) {
+          setCurrentUser(profile);
+          setIsAuthenticated(true);
+          console.log('User authenticated successfully:', profile.name);
+        } else {
+          console.log('Profile not found, creating new profile...');
           const userData = session.user.user_metadata || {};
           const { data: newProfile } = await supabaseService.createProfile(
             session.user.id,
@@ -35,17 +31,16 @@ export const useAuthState = () => {
             userData.phone || '',
             userData.role || 'client'
           );
-          profile = newProfile;
-        }
-        
-        if (profile) {
-          setCurrentUser(profile);
-          setIsAuthenticated(true);
-          console.log('User authenticated successfully:', profile.name);
-        } else {
-          console.error('Failed to get or create user profile');
-          setCurrentUser(null);
-          setIsAuthenticated(false);
+          
+          if (newProfile) {
+            setCurrentUser(newProfile);
+            setIsAuthenticated(true);
+            console.log('New profile created successfully:', newProfile.name);
+          } else {
+            console.error('Failed to create user profile');
+            setCurrentUser(null);
+            setIsAuthenticated(false);
+          }
         }
       } else {
         console.log('No session found, user not authenticated');
@@ -64,13 +59,13 @@ export const useAuthState = () => {
   useEffect(() => {
     let isMounted = true;
 
-    // إعداد مهلة زمنية للتأكد من عدم التعليق
+    // إعداد مهلة زمنية قصيرة للتأكد من عدم التعليق
     const initTimeout = setTimeout(() => {
       if (isMounted) {
-        console.warn('Authentication initialization timeout');
+        console.warn('Authentication initialization timeout - proceeding anyway');
         setIsInitializing(false);
       }
-    }, 8000);
+    }, 3000); // تقليل المهلة إلى 3 ثوان
 
     // الاستماع لتغييرات حالة المصادقة
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -82,7 +77,7 @@ export const useAuthState = () => {
       }
     );
 
-    // التحقق من الجلسة الحالية
+    // التحقق من الجلسة الحالية فوراً
     const checkCurrentSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();

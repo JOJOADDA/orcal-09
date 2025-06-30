@@ -1,10 +1,11 @@
+
 import { useState, useCallback, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Lock, Eye, EyeOff, Phone, Mail, AlertCircle, CheckCircle } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Phone, Mail, CheckCircle } from 'lucide-react';
 import { supabaseService } from '@/services/supabaseService';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -108,13 +109,8 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     
     try {
       console.log('Starting login process...');
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Login timeout')), 10000)
-      );
       
-      const loginPromise = supabaseService.signIn(identifier, loginData.password, identifierType);
-      
-      const { data, error } = await Promise.race([loginPromise, timeoutPromise]) as any;
+      const { data, error } = await supabaseService.signIn(identifier, loginData.password, identifierType);
       
       if (error) {
         console.error('Login error:', error);
@@ -145,22 +141,14 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
           description: "مرحباً بك في أوركال للدعاية والإعلان"
         });
         
-        // انتظار قصير للسماح بتحديث حالة المصادقة
-        setTimeout(() => {
-          onAuthSuccess();
-        }, 1000);
+        // تنفيذ onAuthSuccess فوراً بدون انتظار
+        onAuthSuccess();
       }
     } catch (error: any) {
       console.error('Login exception:', error);
-      let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
-      
-      if (error.message === 'Login timeout') {
-        errorMessage = "انتهت مهلة تسجيل الدخول. يرجى المحاولة مرة أخرى.";
-      }
-      
       toast({
         title: "خطأ",
-        description: errorMessage,
+        description: "حدث خطأ أثناء تسجيل الدخول. يرجى المحاولة مرة أخرى.",
         variant: "destructive"
       });
     } finally {
@@ -190,18 +178,13 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
     
     try {
       console.log('Starting signup process...');
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Signup timeout')), 15000)
-      );
       
-      const signupPromise = supabaseService.signUp(
+      const { data, error } = await supabaseService.signUp(
         identifier,
         signupData.password,
         signupData.name,
         identifierType === 'phone' ? identifier : ''
       );
-      
-      const { data, error } = await Promise.race([signupPromise, timeoutPromise]) as any;
 
       if (error) {
         console.error('Signup error:', error);
@@ -239,20 +222,14 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
             title: "تم إنشاء الحساب بنجاح!",
             description: "مرحباً بك في أوركال للدعاية والإعلان"
           });
-          setTimeout(() => onAuthSuccess(), 1500);
+          onAuthSuccess();
         }
       }
     } catch (error: any) {
       console.error('Signup exception:', error);
-      let errorMessage = "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.";
-      
-      if (error.message === 'Signup timeout') {
-        errorMessage = "انتهت مهلة إنشاء الحساب. يرجى المحاولة مرة أخرى.";
-      }
-      
       toast({ 
         title: "خطأ", 
-        description: errorMessage, 
+        description: "حدث خطأ أثناء إنشاء الحساب. يرجى المحاولة مرة أخرى.", 
         variant: "destructive" 
       });
     } finally {
