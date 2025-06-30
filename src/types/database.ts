@@ -1,8 +1,9 @@
+
 export interface Profile {
   id: string;
   name: string;
   phone: string;
-  role: 'client' | 'admin';
+  role: 'client' | 'admin' | 'designer';
   avatar_url?: string;
   created_at: string;
   updated_at: string;
