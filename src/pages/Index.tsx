@@ -174,7 +174,7 @@ const Index = () => {
 
   // Show designer dashboard if designer is authenticated
   if (isDesignerAuthenticated && designerUser) {
-    return <DesignerDashboard user={designerUser} onLogout={handleDesignerLogout} />;
+    return <DesignerDashboard designerData={designerUser} onLogout={handleDesignerLogout} />;
   }
 
   // Show designer auth dialog
