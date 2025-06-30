@@ -1,3 +1,4 @@
+
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -5,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { X, Send, MessageSquare, Paperclip } from 'lucide-react';
 import { Profile, ChatMessage, DesignOrder } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { unifiedChatService } from '@/services/unifiedChatService';
+import { realChatService } from '@/services/chat/realChatService';
 
 interface ChatWindowProps {
   user: Profile;
@@ -24,7 +25,7 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   useEffect(() => {
     loadMessages();
     
-    const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (newMessage) => {
+    const unsubscribe = realChatService.subscribeToMessages(order.id, (newMessage) => {
       console.log('New message received in chat window:', newMessage);
       setMessages(prev => {
         const exists = prev.find(msg => msg.id === newMessage.id);
@@ -47,11 +48,11 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
   const loadMessages = async () => {
     setIsLoadingMessages(true);
     try {
-      const orderMessages = await unifiedChatService.getMessages(order.id);
+      const orderMessages = await realChatService.getMessagesByOrderId(order.id);
       console.log('Loaded messages for order:', order.id, 'Count:', orderMessages.length);
       setMessages(orderMessages);
       
-      await unifiedChatService.markMessagesAsRead(order.id, user.id);
+      await realChatService.markMessagesAsRead(order.id, user.id);
     } catch (error) {
       console.error('Error loading messages:', error);
       toast({
@@ -81,7 +82,7 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
       console.log('Order ID:', order.id);
       console.log('Message:', newMessage);
       
-      const result = await unifiedChatService.sendMessage({
+      const result = await realChatService.sendMessage({
         order_id: order.id,
         sender_id: user.id,
         sender_name: user.name,
@@ -209,7 +210,7 @@ const ChatWindow = ({ user, order, onClose }: ChatWindowProps) => {
                     {message.sender_role !== 'system' && (
                       <div className="flex items-center gap-2 mb-1">
                         <span className="text-xs font-medium opacity-75">
-                          {message.sender_name} ({getRoleDisplayName(message.sender_role === 'admin' && message.sender_name !== 'النظام' ? 'designer' : message.sender_role)})
+                          {message.sender_name} ({getRoleDisplayName(message.sender_role)})
                         </span>
                         <span className="text-xs opacity-60">
                           {new Date(message.created_at).toLocaleTimeString('ar', {

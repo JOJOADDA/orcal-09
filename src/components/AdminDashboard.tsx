@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,9 +17,11 @@ import {
   Filter,
   Settings
 } from 'lucide-react';
-import { supabaseService } from '@/services/supabaseService';
-import { DesignOrder, Profile, ChatRoom } from '@/types/database';
-import ChatWindow from './ChatWindow';
+import { DesignOrder, Profile } from '@/types/database';
+import { orderService } from '@/services/orders/orderService';
+import { statisticsService } from '@/services/statistics/statisticsService';
+import ChatWindow from './chat/ChatWindow';
+import { useToast } from '@/hooks/use-toast';
 
 interface AdminDashboardProps {
   user: Profile;
@@ -27,7 +30,6 @@ interface AdminDashboardProps {
 
 const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
   const [orders, setOrders] = useState<DesignOrder[]>([]);
-  const [chatRooms, setChatRooms] = useState<ChatRoom[]>([]);
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -39,6 +41,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     completedOrders: 0,
     activeClients: 0
   });
+  const { toast } = useToast();
 
   useEffect(() => {
     loadData();
@@ -46,22 +49,49 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
 
   const loadData = async () => {
     setIsLoading(true);
-    const [allOrders, allChatRooms, statistics] = await Promise.all([
-      supabaseService.getAllOrders(),
-      supabaseService.getAllChatRooms(),
-      supabaseService.getStatistics()
-    ]);
-    
-    setOrders(allOrders);
-    setChatRooms(allChatRooms);
-    setStats(statistics);
-    setIsLoading(false);
+    try {
+      const [allOrders, statistics] = await Promise.all([
+        orderService.getAllOrders(),
+        statisticsService.getStatistics()
+      ]);
+      
+      setOrders(allOrders);
+      setStats(statistics);
+    } catch (error) {
+      console.error('Error loading admin data:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحميل البيانات",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleStatusChange = async (orderId: string, newStatus: DesignOrder['status']) => {
-    const { error } = await supabaseService.updateOrderStatus(orderId, newStatus);
-    if (!error) {
-      loadData();
+    try {
+      const result = await orderService.updateOrderStatus(orderId, newStatus);
+      if (result.error) {
+        throw result.error;
+      }
+      
+      // تحديث القائمة المحلية
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status: newStatus } : order
+      ));
+      
+      toast({
+        title: "تم التحديث",
+        description: "تم تحديث حالة الطلب بنجاح"
+      });
+    } catch (error) {
+      console.error('Error updating order status:', error);
+      toast({
+        title: "خطأ",
+        description: "فشل في تحديث حالة الطلب",
+        variant: "destructive"
+      });
     }
   };
 
@@ -291,46 +321,6 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
       </div>
     </div>
   );
-};
-
-const getStatusIcon = (status: DesignOrder['status']) => {
-  switch (status) {
-    case 'pending':
-      return <Clock className="w-4 h-4" />;
-    case 'in-progress':
-      return <AlertCircle className="w-4 h-4" />;
-    case 'completed':
-      return <CheckCircle className="w-4 h-4" />;
-    case 'delivered':
-      return <Truck className="w-4 h-4" />;
-    default:
-      return <Clock className="w-4 h-4" />;
-  }
-};
-
-const getStatusText = (status: DesignOrder['status']) => {
-  const statusMap = {
-    'pending': 'قيد الانتظار',
-    'in-progress': 'جاري التنفيذ',
-    'completed': 'مكتمل',
-    'delivered': 'تم التسليم'
-  };
-  return statusMap[status];
-};
-
-const getStatusColor = (status: DesignOrder['status']) => {
-  switch (status) {
-    case 'pending':
-      return 'bg-yellow-100 text-yellow-800';
-    case 'in-progress':
-      return 'bg-blue-100 text-blue-800';
-    case 'completed':
-      return 'bg-green-100 text-green-800';
-    case 'delivered':
-      return 'bg-purple-100 text-purple-800';
-    default:
-      return 'bg-gray-100 text-gray-800';
-  }
 };
 
 export default AdminDashboard;

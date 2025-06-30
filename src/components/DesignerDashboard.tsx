@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
 import ChatWindow from './chat/ChatWindow';
 import { useToast } from '@/hooks/use-toast';
-import { unifiedChatService } from '@/services/unifiedChatService';
+import { realChatService } from '@/services/chat/realChatService';
 import { orderService } from '@/services/orders/orderService';
 import { realTimeSyncService } from '@/services/realTimeSync';
 import { DesignerProfileService } from '@/services/designers/designerProfileService';
@@ -131,11 +131,11 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
 
       // إرسال إشعار للعميل من المصمم
       console.log('Sending status update message with designer profile:', designerProfile);
-      const messageResult = await unifiedChatService.sendMessage({
+      const messageResult = await realChatService.sendMessage({
         order_id: orderId,
         sender_id: designerProfile.id,
         sender_name: designerProfile.name,
-        sender_role: 'designer',
+        sender_role: 'admin',
         content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
         message_type: 'system'
       });
@@ -145,6 +145,11 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       } else {
         console.error('Failed to send status update message:', messageResult.error);
       }
+
+      // تحديث القائمة المحلية
+      setOrders(prev => prev.map(order => 
+        order.id === orderId ? { ...order, status } : order
+      ));
 
       toast({
         title: "تم التحديث",
