@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,13 +33,21 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
   const { toast } = useToast();
 
   useEffect(() => {
+    console.log('=== EnhancedChatWindow initialized ===');
+    console.log('User:', user);
+    console.log('Order:', order);
+    
     loadMessages();
     
     const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (newMessage) => {
       console.log('New message received in EnhancedChatWindow:', newMessage);
       setMessages(prev => {
         const exists = prev.find(msg => msg.id === newMessage.id);
-        if (exists) return prev;
+        if (exists) {
+          console.log('Message already exists, skipping');
+          return prev;
+        }
+        console.log('Adding new message to chat');
         return [...prev, newMessage];
       });
       
@@ -57,6 +64,7 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
     inputRef.current?.focus();
 
     return () => {
+      console.log('EnhancedChatWindow cleanup');
       if (unsubscribe) {
         unsubscribe();
       }
@@ -70,11 +78,18 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
   const loadMessages = async () => {
     setIsLoadingMessages(true);
     try {
-      console.log('Loading messages for order:', order.id, 'User:', user.id);
+      console.log('=== Loading messages ===');
+      console.log('Order ID:', order.id);
+      console.log('User ID:', user.id);
+      console.log('User Role:', user.role);
+      
       const orderMessages = await unifiedChatService.getMessages(order.id);
+      console.log('Messages loaded:', orderMessages.length);
+      console.log('Sample messages:', orderMessages.slice(0, 3));
+      
       setMessages(orderMessages);
       await unifiedChatService.markMessagesAsRead(order.id, user.id);
-      console.log('Messages loaded successfully:', orderMessages.length);
+      console.log('Messages marked as read');
     } catch (error) {
       console.error('Error loading messages:', error);
       toast({
@@ -101,7 +116,9 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
     setIsLoading(true);
     
     try {
-      console.log('Sending message from:', user.name, 'Role:', user.role, 'Content:', messageContent.substring(0, 50));
+      console.log('=== Sending message ===');
+      console.log('Sender:', user.name, 'Role:', user.role, 'ID:', user.id);
+      console.log('Content:', messageContent.substring(0, 50));
       
       const result = await unifiedChatService.sendMessage({
         order_id: order.id,

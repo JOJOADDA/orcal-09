@@ -57,7 +57,8 @@ export class UnifiedChatService {
   // إنشاء أو جلب غرفة الدردشة
   async getOrCreateChatRoom(orderId: string, userId: string, userRole: string = 'client'): Promise<ChatRoom | null> {
     try {
-      console.log('Getting/Creating chat room for order:', orderId, 'User:', userId, 'Role:', userRole);
+      console.log('=== Getting/Creating chat room ===');
+      console.log('Order ID:', orderId, 'User:', userId, 'Role:', userRole);
       
       if (!this.isValidUUID(orderId)) {
         console.error('Invalid order ID format:', orderId);
@@ -76,6 +77,7 @@ export class UnifiedChatService {
         
         // تحديث admin_id إذا كان المستخدم مصمم ولم يكن محدد
         if (userRole === 'designer' && !existingRoom.admin_id) {
+          console.log('Updating chat room admin_id for designer');
           const { error: updateError } = await supabase
             .from('chat_rooms')
             .update({ admin_id: userId })
@@ -83,6 +85,7 @@ export class UnifiedChatService {
           
           if (!updateError) {
             existingRoom.admin_id = userId;
+            console.log('Chat room admin_id updated successfully');
           }
         }
         
@@ -134,7 +137,8 @@ export class UnifiedChatService {
   // جلب جميع الرسائل لطلب معين
   async getMessages(orderId: string): Promise<ChatMessage[]> {
     try {
-      console.log('Fetching messages for order:', orderId);
+      console.log('=== Fetching messages ===');
+      console.log('Order ID:', orderId);
       
       if (!this.isValidUUID(orderId)) {
         console.error('Invalid order ID format:', orderId);
@@ -159,6 +163,14 @@ export class UnifiedChatService {
       })) as ChatMessage[];
 
       console.log('Messages fetched successfully:', messages.length);
+      console.log('Sample messages:', messages.slice(0, 3).map(m => ({
+        id: m.id,
+        content: m.content.substring(0, 50),
+        sender_name: m.sender_name,
+        sender_role: m.sender_role,
+        created_at: m.created_at
+      })));
+      
       return messages;
     } catch (error) {
       this.handleError(error, 'Get Messages');
@@ -341,7 +353,8 @@ export class UnifiedChatService {
   // الاشتراك في الرسائل الجديدة مع معالجة محسنة للأخطاء
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void): (() => void) | null {
     try {
-      console.log('Setting up real-time subscription for order:', orderId);
+      console.log('=== Setting up real-time subscription ===');
+      console.log('Order ID:', orderId);
       
       if (!this.isValidUUID(orderId)) {
         console.error('Invalid order ID format for subscription:', orderId);
@@ -352,6 +365,7 @@ export class UnifiedChatService {
       
       // إغلاق القناة الموجودة إن وجدت
       if (this.activeChannels.has(channelName)) {
+        console.log('Closing existing channel:', channelName);
         this.activeChannels.get(channelName)?.unsubscribe();
         this.activeChannels.delete(channelName);
       }
@@ -367,7 +381,8 @@ export class UnifiedChatService {
             filter: `order_id=eq.${orderId}`
           },
           (payload) => {
-            console.log('Real-time message received:', payload.new);
+            console.log('=== Real-time message received ===');
+            console.log('Payload:', payload);
             
             if (!payload.new || typeof payload.new !== 'object') {
               console.warn('Invalid message payload received:', payload);
@@ -375,6 +390,7 @@ export class UnifiedChatService {
             }
 
             const messageData = payload.new as any;
+            console.log('Message data:', messageData);
             
             const message = {
               ...messageData,
@@ -382,6 +398,7 @@ export class UnifiedChatService {
               message_type: (messageData.message_type || 'text') as 'text' | 'file' | 'system'
             } as ChatMessage;
             
+            console.log('Processed message:', message);
             callback(message);
           }
         )
@@ -389,10 +406,13 @@ export class UnifiedChatService {
           console.log('Subscription status:', status);
           if (status === 'SUBSCRIBED') {
             console.log('Real-time connection established for order:', orderId);
+          } else if (status === 'CHANNEL_ERROR') {
+            console.error('Real-time channel error for order:', orderId);
           }
         });
 
       this.activeChannels.set(channelName, channel);
+      console.log('Real-time subscription set up successfully');
 
       return () => {
         console.log('Unsubscribing from real-time messages for order:', orderId);

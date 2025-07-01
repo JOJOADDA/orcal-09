@@ -26,13 +26,15 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   useEffect(() => {
     const initializeDesignerProfile = async () => {
       try {
-        console.log('Initializing designer profile for:', designerData.name);
+        console.log('=== Initializing designer profile ===');
+        console.log('Designer data:', designerData);
         
         // إنشاء ملف تعريف المصمم باستخدام الخدمة الجديدة
         const profile = await DesignerProfileService.createDesignerProfile(designerData.name);
+        console.log('Designer profile created/retrieved:', profile);
         setDesignerProfile(profile);
         
-        console.log('Designer profile initialized successfully:', profile);
+        console.log('Designer profile initialized successfully');
       } catch (error) {
         console.error('Error initializing designer profile:', error);
         toast({
@@ -49,10 +51,14 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   useEffect(() => {
     if (!designerProfile) return;
 
+    console.log('=== Setting up designer dashboard ===');
+    console.log('Designer profile:', designerProfile);
+    
     loadOrders();
     
     // الاشتراك في التحديثات الفورية للطلبات
     const unsubscribeOrders = realTimeSyncService.subscribeToOrderUpdates((updatedOrder) => {
+      console.log('Designer received order update:', updatedOrder);
       setOrders(prev => {
         const existingIndex = prev.findIndex(order => order.id === updatedOrder.id);
         if (existingIndex >= 0) {
@@ -63,8 +69,6 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
           return [updatedOrder, ...prev];
         }
       });
-
-      console.log('Designer received order update:', updatedOrder);
     });
 
     // الاشتراك في الرسائل الجديدة من العملاء باستخدام unifiedChatService
@@ -72,11 +76,13 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     
     orders.forEach(order => {
       const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (message) => {
+        console.log('Designer received new message:', message);
         // إشعار المصمم بالرسائل الجديدة من العملاء فقط
         if (message.sender_role === 'client' && message.sender_id !== designerProfile.id) {
           toast({
             title: "رسالة جديدة من العميل",
-            description: `رسالة في طلب: ${order.design_type}`
+            description: `رسالة في طلب: ${order.design_type}`,
+            duration: 5000
           });
         }
       });
@@ -87,6 +93,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     });
 
     return () => {
+      console.log('Cleaning up designer dashboard subscriptions');
       if (unsubscribeOrders) unsubscribeOrders();
       messageSubscriptions.forEach(unsub => unsub());
     };
@@ -95,8 +102,10 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   const loadOrders = async () => {
     setIsLoading(true);
     try {
+      console.log('Loading orders for designer dashboard');
       const allOrders = await orderService.getAllOrders();
-      console.log('Loaded orders for designer:', allOrders.length);
+      console.log('Loaded orders:', allOrders.length);
+      console.log('Sample orders:', allOrders.slice(0, 2));
       setOrders(allOrders);
     } catch (error) {
       console.error('Error loading orders:', error);
@@ -117,6 +126,9 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     }
 
     try {
+      console.log('=== Updating order status ===');
+      console.log('Order ID:', orderId, 'New status:', status);
+      
       const result = await orderService.updateOrderStatus(orderId, status);
       if (result.error) {
         throw result.error;
@@ -183,6 +195,10 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   if (selectedOrderId) {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
+      console.log('=== Opening chat window ===');
+      console.log('Designer profile for chat:', designerProfile);
+      console.log('Selected order:', selectedOrder);
+      
       return (
         <EnhancedChatWindow
           user={designerProfile}
