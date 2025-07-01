@@ -18,25 +18,46 @@ const DesignerProfileInit = ({ designerName, onProfileInitialized }: DesignerPro
         console.log('=== Initializing designer profile ===');
         console.log('Designer name:', designerName);
         
-        const profile = await DesignerProfileService.createDesignerProfile(designerName);
-        console.log('Designer profile created/retrieved:', profile);
+        if (!designerName || designerName.trim() === '') {
+          throw new Error('اسم المصمم مطلوب');
+        }
         
+        const profile = await DesignerProfileService.createDesignerProfile(designerName);
+        
+        if (!profile) {
+          throw new Error('فشل في إنشاء أو جلب ملف المصمم');
+        }
+        
+        console.log('Designer profile created/retrieved:', profile);
         onProfileInitialized(profile);
         console.log('Designer profile initialized successfully');
       } catch (error) {
         console.error('Error initializing designer profile:', error);
+        
+        const errorMessage = error instanceof Error 
+          ? error.message 
+          : 'فشل في تهيئة ملف المصمم';
+          
         toast({
-          title: "خطأ",
-          description: "فشل في تهيئة ملف المصمم",
+          title: "خطأ في تحميل ملف المصمم",
+          description: errorMessage,
           variant: "destructive"
         });
+        
+        // إعادة المحاولة بعد ثانيتين
+        setTimeout(() => {
+          if (isInitializing) {
+            console.log('Retrying profile initialization...');
+            initializeDesignerProfile();
+          }
+        }, 2000);
       } finally {
         setIsInitializing(false);
       }
     };
 
     initializeDesignerProfile();
-  }, [designerName, onProfileInitialized, toast]);
+  }, [designerName, onProfileInitialized, toast, isInitializing]);
 
   if (isInitializing) {
     return (
