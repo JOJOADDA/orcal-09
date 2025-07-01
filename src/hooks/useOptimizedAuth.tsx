@@ -9,21 +9,38 @@ export const useOptimizedAuth = () => {
   const [isInitializing, setIsInitializing] = useState(true);
 
   // تحسين معالج تغيير حالة المصادقة
-  const handleAuthStateChange = useCallback((event: string, session: any) => {
+  const handleAuthStateChange = useCallback(async (event: string, session: any) => {
     if (session?.user) {
-      // استخدام بيانات المستخدم من الجلسة مباشرة لتسريع العملية
-      const userProfile: Profile = {
-        id: session.user.id,
-        name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'مستخدم',
-        phone: session.user.user_metadata?.phone || '',
-        role: session.user.user_metadata?.role || 'client',
-        avatar_url: session.user.user_metadata?.avatar_url || null,
-        created_at: session.user.created_at,
-        updated_at: session.user.updated_at || session.user.created_at
-      };
-      
-      setCurrentUser(userProfile);
-      setIsAuthenticated(true);
+      try {
+        // جلب بيانات المستخدم من قاعدة البيانات
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .maybeSingle();
+        
+        if (profileData && !error) {
+          setCurrentUser(profileData);
+          setIsAuthenticated(true);
+        } else {
+          // إذا لم توجد بيانات في قاعدة البيانات، نستخدم البيانات الأساسية
+          const fallbackProfile: Profile = {
+            id: session.user.id,
+            name: session.user.email?.split('@')[0] || 'مستخدم',
+            phone: '',
+            role: 'client',
+            avatar_url: null,
+            created_at: session.user.created_at,
+            updated_at: session.user.created_at
+          };
+          setCurrentUser(fallbackProfile);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
     } else {
       setCurrentUser(null);
       setIsAuthenticated(false);
