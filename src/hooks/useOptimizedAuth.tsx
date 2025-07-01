@@ -1,0 +1,105 @@
+
+import { useState, useEffect, useCallback } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { Profile } from '@/types/database';
+
+export const useOptimizedAuth = () => {
+  const [currentUser, setCurrentUser] = useState<Profile | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // تحسين معالج تغيير حالة المصادقة
+  const handleAuthStateChange = useCallback((event: string, session: any) => {
+    if (session?.user) {
+      // استخدام بيانات المستخدم من الجلسة مباشرة لتسريع العملية
+      const userProfile: Profile = {
+        id: session.user.id,
+        name: session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'مستخدم',
+        phone: session.user.user_metadata?.phone || '',
+        role: session.user.user_metadata?.role || 'client',
+        avatar_url: session.user.user_metadata?.avatar_url || null,
+        created_at: session.user.created_at,
+        updated_at: session.user.updated_at || session.user.created_at
+      };
+      
+      setCurrentUser(userProfile);
+      setIsAuthenticated(true);
+    } else {
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+    }
+    
+    setIsInitializing(false);
+  }, []);
+
+  // تهيئة محسنة للمصادقة
+  useEffect(() => {
+    let mounted = true;
+
+    // إعداد مستمع تغيير حالة المصادقة
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthStateChange);
+
+    // فحص الجلسة الحالية مع timeout قصير
+    const checkSession = async () => {
+      try {
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 2000)
+        );
+        
+        const sessionPromise = supabase.auth.getSession();
+        const { data: { session } } = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        
+        if (mounted) {
+          handleAuthStateChange('INITIAL_SESSION', session);
+        }
+      } catch (error) {
+        console.log('Session check timeout, continuing...');
+        if (mounted) {
+          setIsInitializing(false);
+        }
+      }
+    };
+
+    checkSession();
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [handleAuthStateChange]);
+
+  // تسجيل دخول محسن
+  const signIn = useCallback(async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
+      if (error) return { success: false, error: error.message };
+      return { success: true, data };
+    } catch (error: any) {
+      return { success: false, error: error.message || 'فشل تسجيل الدخول' };
+    }
+  }, []);
+
+  // تسجيل خروج محسن
+  const signOut = useCallback(async () => {
+    try {
+      await supabase.auth.signOut();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }, []);
+
+  return {
+    currentUser,
+    isAuthenticated,
+    isInitializing,
+    signIn,
+    signOut
+  };
+};
