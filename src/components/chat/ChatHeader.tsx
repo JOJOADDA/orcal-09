@@ -7,16 +7,20 @@ import { CardHeader } from '@/components/ui/card';
 import { 
   X, Phone, Video, MoreVertical
 } from 'lucide-react';
-import { DesignOrder } from '@/types/database';
+import { DesignOrder, Profile } from '@/types/database';
 import { cn } from '@/lib/utils';
 
 interface ChatHeaderProps {
   order: DesignOrder;
+  user: Profile;
   onlineStatus: boolean;
   onClose: () => void;
+  onCall?: () => void;
+  onVideoCall?: () => void;
+  onSettings?: () => void;
 }
 
-const ChatHeader = ({ order, onlineStatus, onClose }: ChatHeaderProps) => {
+const ChatHeader = ({ order, user, onlineStatus, onClose, onCall, onVideoCall, onSettings }: ChatHeaderProps) => {
   const getStatusColor = (status: DesignOrder['status']) => {
     const colors = {
       'pending': 'bg-yellow-500',
@@ -76,15 +80,21 @@ const ChatHeader = ({ order, onlineStatus, onClose }: ChatHeaderProps) => {
       </div>
       
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-          <Phone className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-          <Video className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
-          <MoreVertical className="w-4 h-4" />
-        </Button>
+        {onCall && (
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10" onClick={onCall}>
+            <Phone className="w-4 h-4" />
+          </Button>
+        )}
+        {onVideoCall && (
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10" onClick={onVideoCall}>
+            <Video className="w-4 h-4" />
+          </Button>
+        )}
+        {onSettings && (
+          <Button variant="ghost" size="sm" className="text-white hover:bg-white/10" onClick={onSettings}>
+            <MoreVertical className="w-4 h-4" />
+          </Button>
+        )}
         <Separator orientation="vertical" className="h-6 bg-white/20" />
         <Button
           variant="ghost"
