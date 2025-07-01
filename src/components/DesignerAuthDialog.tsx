@@ -10,11 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { User, Lock, Eye, EyeOff, Palette, Mail, Phone, Briefcase, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { authService } from '@/services/auth/authService';
-import { designerService } from '@/services/designers/designerService';
+import { EnhancedAuthService } from '@/services/auth/enhancedAuthService';
 
 interface DesignerAuthDialogProps {
   onClose: () => void;
-  onDesignerLogin: (designerData: { name: string; role: string; email: string }) => void;
+  onDesignerLogin: (designerData: { id?: string; name: string; role: string; email: string }) => void;
 }
 
 const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProps) => {
@@ -81,81 +81,37 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
     try {
       console.log('Attempting designer login with email:', loginData.email);
       
-      // محاولة تسجيل الدخول مباشرة بدون التحقق من وجود المصمم
-      const { data, error } = await authService.signIn(loginData.email, loginData.password, 'email');
-      
-      if (error) {
-        let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
-        
-        if (typeof error === 'string') {
-          if (error.includes('User already registered')) {
-            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.";
-          } else if (error.includes('Invalid login credentials')) {
-            errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
-          } else if (error.includes('Email not confirmed')) {
-            errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً";
-          }
-        } else if (error.message) {
-          if (error.message.includes('User already registered')) {
-            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.";
-          } else if (error.message.includes('Invalid login credentials')) {
-            errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
-          } else if (error.message.includes('Email not confirmed')) {
-            errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً";
-          }
-        }
-        
+      const result = await EnhancedAuthService.signInDesigner(loginData.email, loginData.password);
+
+      if (!result.success) {
         toast({
           title: "خطأ في تسجيل الدخول",
-          description: errorMessage,
+          description: result.error || 'فشل تسجيل الدخول',
           variant: "destructive"
         });
         return;
       }
 
-      if (data?.user) {
-        console.log('Auth successful for designer login, user:', data.user.id);
-        
-        // البحث عن المصمم أو إنشاء ملف تعريف جديد
-        let designer = await designerService.getDesignerByEmail(loginData.email);
-        
-        if (!designer) {
-          console.log('Designer not found, creating new designer profile...');
-          // إنشاء ملف تعريف مصمم جديد تلقائياً
-          const createResult = await designerService.signUpDesigner({
-            email: loginData.email,
-            password: loginData.password,
-            name: data.user.email?.split('@')[0] || 'مصمم جديد',
-            specialization: 'تصميم عام',
-            experienceYears: 0
-          });
-          
-          if (createResult.data) {
-            designer = await designerService.getDesignerByEmail(loginData.email);
-          }
-        }
-        
-        // ربط المصمم بالمستخدم المصادق عليه
-        if (designer && (!designer.user_id || designer.user_id !== data.user.id)) {
-          console.log('Linking designer to authenticated user...');
-          const linkResult = await designerService.linkDesignerToUser(designer.id, data.user.id);
-          if (linkResult.data) {
-            designer.user_id = data.user.id;
-            console.log('Designer successfully linked to user');
-          }
-        }
-        
-        const designerName = designer?.name || data.user.email?.split('@')[0] || 'مصمم';
+      if (result.data?.designer) {
+        console.log('Designer signed in successfully:', result.data.designer);
         
         toast({
           title: "تم تسجيل الدخول بنجاح!",
-          description: `مرحباً ${designerName}، يمكنك الآن إدارة المشاريع`
+          description: `مرحباً ${result.data.designer.name}، يمكنك الآن إدارة المشاريع`
         });
         
-        onDesignerLogin({ 
-          name: designerName, 
-          role: 'designer', 
-          email: loginData.email 
+        onDesignerLogin({
+          id: result.data.designer.id,
+          name: result.data.designer.name,
+          email: result.data.designer.email,
+          role: 'designer'
+        });
+        onClose();
+      } else {
+        toast({
+          title: "خطأ",
+          description: "لم يتم العثور على بيانات المصمم",
+          variant: "destructive"
         });
       }
     } catch (error) {
@@ -212,69 +168,48 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
 
     setIsLoading(true);
     try {
-      const { data, error } = await designerService.signUpDesigner({
-        email: signupData.email,
-        password: signupData.password,
+      const result = await EnhancedAuthService.createDesignerAccount({
         name: signupData.name,
+        email: signupData.email,
         phone: signupData.phone,
         specialization: signupData.specialization || 'تصميم عام',
-        experienceYears: parseInt(signupData.experienceYears) || 0,
-        portfolioUrl: signupData.portfolioUrl
+        experience_years: parseInt(signupData.experienceYears) || 0,
+        portfolio_url: signupData.portfolioUrl
       });
 
-      if (error) {
-        let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
-        
-        if (typeof error === 'string') {
-          if (error.includes('User already registered') || 
-              error.includes('Designer already exists')) {
-            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً";
-          } else if (error.includes('Password should be at least 6 characters')) {
-            errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
-          }
-        } else if (error.message) {
-          if (error.message.includes('User already registered') || 
-              error.message.includes('Designer already exists')) {
-            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً";
-          } else if (error.message.includes('Password should be at least 6 characters')) {
-            errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
-          }
-        }
-        
+      if (!result.success) {
         toast({
           title: "فشل التسجيل",
-          description: errorMessage,
+          description: result.error || 'حدث خطأ أثناء إنشاء الحساب',
           variant: "destructive"
         });
         return;
       }
 
-      if (data?.user) {
-        toast({
-          title: "تم إنشاء الحساب بنجاح!",
-          description: "تم إنشاء حساب المصمم بنجاح. يمكنك الآن تسجيل الدخول",
-          variant: "default"
-        });
-        
-        // Clear form and switch to login tab
-        setSignupData({
-          name: '',
-          email: '',
-          password: '',
-          confirmPassword: '',
-          phone: '',
-          specialization: '',
-          experienceYears: '0',
-          portfolioUrl: ''
-        });
-        setActiveTab('login');
-        
-        // Pre-fill login email
-        setLoginData(prev => ({
-          ...prev,
-          email: signupData.email
-        }));
-      }
+      toast({
+        title: "تم إنشاء الحساب بنجاح!",
+        description: "تم إنشاء حساب المصمم بنجاح. سيتم مراجعة طلبك وتفعيل الحساب قريباً",
+        variant: "default"
+      });
+      
+      // Clear form and switch to login tab
+      setSignupData({
+        name: '',
+        email: '',
+        password: '',
+        confirmPassword: '',
+        phone: '',
+        specialization: '',
+        experienceYears: '0',
+        portfolioUrl: ''
+      });
+      setActiveTab('login');
+      
+      // Pre-fill login email
+      setLoginData(prev => ({
+        ...prev,
+        email: signupData.email
+      }));
     } catch (error) {
       console.error('Designer signup error:', error);
       toast({

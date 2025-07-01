@@ -178,6 +178,51 @@ export type Database = {
           },
         ]
       }
+      designers: {
+        Row: {
+          created_at: string
+          email: string
+          experience_years: number | null
+          id: string
+          is_active: boolean | null
+          is_verified: boolean | null
+          name: string
+          phone: string | null
+          portfolio_url: string | null
+          specialization: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          name: string
+          phone?: string | null
+          portfolio_url?: string | null
+          specialization?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          experience_years?: number | null
+          id?: string
+          is_active?: boolean | null
+          is_verified?: boolean | null
+          name?: string
+          phone?: string | null
+          portfolio_url?: string | null
+          specialization?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       message_files: {
         Row: {
           file_type: string
@@ -332,6 +377,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_designer: {
+        Args: {
+          p_name: string
+          p_email: string
+          p_phone?: string
+          p_specialization?: string
+          p_experience_years?: number
+          p_portfolio_url?: string
+        }
+        Returns: string
+      }
+      check_email_exists: {
+        Args: { p_email: string }
+        Returns: Json
+      }
       get_all_orders_for_designers: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -368,6 +428,10 @@ export type Database = {
           p_resource_id?: string
         }
         Returns: undefined
+      }
+      verify_designer: {
+        Args: { p_email: string }
+        Returns: boolean
       }
     }
     Enums: {

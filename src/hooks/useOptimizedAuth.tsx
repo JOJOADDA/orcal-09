@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
+import { EnhancedAuthService } from '@/services/auth/enhancedAuthService';
 
 export const useOptimizedAuth = () => {
   const [currentUser, setCurrentUser] = useState<Profile | null>(null);
@@ -92,13 +93,8 @@ export const useOptimizedAuth = () => {
   // تسجيل دخول محسن
   const signIn = useCallback(async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) return { success: false, error: error.message };
-      return { success: true, data };
+      const result = await EnhancedAuthService.signInClient(email, password);
+      return result;
     } catch (error: any) {
       return { success: false, error: error.message || 'فشل تسجيل الدخول' };
     }
@@ -107,10 +103,12 @@ export const useOptimizedAuth = () => {
   // تسجيل خروج محسن
   const signOut = useCallback(async () => {
     try {
-      await supabase.auth.signOut();
-      setCurrentUser(null);
-      setIsAuthenticated(false);
-      return { success: true };
+      const result = await EnhancedAuthService.signOut();
+      if (result.success) {
+        setCurrentUser(null);
+        setIsAuthenticated(false);
+      }
+      return result;
     } catch (error: any) {
       return { success: false, error: error.message };
     }

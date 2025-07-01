@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Lock, Eye, EyeOff, Mail } from 'lucide-react';
 import { useOptimizedAuth } from '@/hooks/useOptimizedAuth';
-import { optimizedSupabaseService } from '@/services/optimizedSupabaseService';
+import { EnhancedAuthService } from '@/services/auth/enhancedAuthService';
 import { useToast } from '@/hooks/use-toast';
 
 interface FastAuthPageProps {
@@ -42,14 +42,14 @@ const FastAuthPage = ({ onAuthSuccess }: FastAuthPageProps) => {
     return { isValid };
   }, [signupData]);
 
-  // معالج تسجيل الدخول محسن
+  // معالج تسجيل الدخول محسن مع التحقق من نوع المستخدم
   const handleLogin = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginValidation.isValid) return;
 
     setIsLoading(true);
     try {
-      const result = await signIn(loginData.email, loginData.password);
+      const result = await EnhancedAuthService.signInClient(loginData.email, loginData.password);
       
       if (result.success) {
         toast({ title: "تم تسجيل الدخول بنجاح!" });
@@ -70,22 +70,22 @@ const FastAuthPage = ({ onAuthSuccess }: FastAuthPageProps) => {
     } finally {
       setIsLoading(false);
     }
-  }, [loginData, loginValidation.isValid, signIn, toast, onAuthSuccess]);
+  }, [loginData, loginValidation.isValid, toast, onAuthSuccess]);
 
-  // معالج إنشاء الحساب محسن
+  // معالج إنشاء الحساب محسن مع التحقق من الإيميل
   const handleSignup = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (!signupValidation.isValid) return;
 
     setIsLoading(true);
     try {
-      const result = await optimizedSupabaseService.signUp(
-        signupData.email,
-        signupData.password,
-        signupData.name
-      );
+      const result = await EnhancedAuthService.signUpClient({
+        name: signupData.name,
+        email: signupData.email,
+        password: signupData.password
+      });
 
-      if (result.error) {
+      if (!result.success) {
         toast({
           title: "فشل التسجيل",
           description: result.error,
@@ -94,10 +94,11 @@ const FastAuthPage = ({ onAuthSuccess }: FastAuthPageProps) => {
         return;
       }
 
-      if (result.success) {
-        toast({ title: "تم إنشاء الحساب بنجاح!" });
-        setTimeout(() => onAuthSuccess(), 1000);
-      }
+      toast({ 
+        title: "تم إنشاء الحساب بنجاح!",
+        description: "مرحباً بك في أوركال للدعاية والإعلان"
+      });
+      setTimeout(() => onAuthSuccess(), 1000);
     } catch (error) {
       toast({ 
         title: "خطأ", 
