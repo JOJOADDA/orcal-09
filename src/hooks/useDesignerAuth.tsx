@@ -38,7 +38,6 @@ export const useDesignerAuth = () => {
       // Force logout even if there's an error
       setDesignerUser(null);
       setIsDesignerAuthenticated(false);
-      console.log('Designer logout forced due to error');
     }
   }, []);
 

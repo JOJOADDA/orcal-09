@@ -12,8 +12,9 @@ export const useRoleValidation = ({ user }: UseRoleValidationProps) => {
 
   useEffect(() => {
     if (!user) {
-      setIsValidRole(false);
-      setRoleError('المستخدم غير مصادق عليه');
+      // إذا لم يكن هناك مستخدم، لا نعتبر هذا خطأ
+      setIsValidRole(true);
+      setRoleError(null);
       return;
     }
 

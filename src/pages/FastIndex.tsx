@@ -6,8 +6,6 @@ import LoadingScreen from '@/components/LoadingScreen';
 import DesignerLoginButton from '@/components/DesignerLoginButton';
 import DesignerAuthDialog from '@/components/DesignerAuthDialog';
 import { useDesignerAuth } from '@/hooks/useDesignerAuth';
-import { useToast } from '@/hooks/use-toast';
-
 // تحميل كسول للمكونات الكبيرة
 const FastAuthPage = lazy(() => import('@/components/FastAuthPage'));
 const ClientDashboard = lazy(() => import('@/components/ClientDashboard'));
@@ -17,7 +15,6 @@ const DesignerDashboard = lazy(() => import('@/components/DesignerDashboard'));
 const FastIndex = () => {
   const { currentUser, isAuthenticated, isInitializing } = useOptimizedAuth();
   const { isValidRole, roleError, isClient, isDesigner, isAdmin } = useRoleValidation({ user: currentUser });
-  const { toast } = useToast();
   const {
     designerUser,
     isDesignerAuthenticated,
@@ -63,8 +60,8 @@ const FastIndex = () => {
     );
   }
 
-  // التحقق من صحة الدور
-  if (!isValidRole && roleError) {
+  // التحقق من صحة الدور (فقط للمستخدمين المصادق عليهم)
+  if (isAuthenticated && currentUser && !isValidRole && roleError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
         <div className="text-center">
