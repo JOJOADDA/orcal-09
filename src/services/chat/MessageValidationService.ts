@@ -1,75 +1,77 @@
-import { SecurityUtils } from '@/utils/security';
 
 export class MessageValidationService {
   static isValidUUID(uuid: string): boolean {
-    return SecurityUtils.isValidUUID(uuid);
-  }
-
-  static handleError(error: any, context: string) {
-    console.error(`[MessageService ${context}] Error:`, error);
-    return error;
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return typeof uuid === 'string' && uuidRegex.test(uuid);
   }
 
   static validateMessageData(messageData: {
     order_id: string;
     sender_id: string;
     sender_name: string;
-    sender_role: 'client' | 'admin' | 'designer' | 'system';
+    sender_role: string;
     content: string;
-    message_type?: 'text' | 'file' | 'system';
   }): { isValid: boolean; error?: string } {
-    if (!SecurityUtils.isValidUUID(messageData.order_id)) {
-      return { isValid: false, error: 'Invalid order ID format' };
+    
+    if (!messageData.order_id || !this.isValidUUID(messageData.order_id)) {
+      return { isValid: false, error: 'معرف الطلب غير صالح' };
     }
 
-    if (!SecurityUtils.isValidUUID(messageData.sender_id)) {
-      return { isValid: false, error: 'Invalid sender ID format' };
+    if (!messageData.sender_id || !this.isValidUUID(messageData.sender_id)) {
+      return { isValid: false, error: 'معرف المرسل غير صالح' };
     }
 
-    // Enhanced content validation with XSS protection
-    const sanitizedContent = SecurityUtils.sanitizeMessageContent(messageData.content);
-    if (!sanitizedContent.trim()) {
-      return { isValid: false, error: 'Message content cannot be empty' };
+    if (!messageData.sender_name || messageData.sender_name.trim().length === 0) {
+      return { isValid: false, error: 'اسم المرسل مطلوب' };
     }
 
-    // Validate sender name
-    const sanitizedName = SecurityUtils.sanitizeHtml(messageData.sender_name);
-    if (!sanitizedName.trim()) {
-      return { isValid: false, error: 'Sender name cannot be empty' };
+    if (!messageData.sender_role || !['client', 'admin', 'designer', 'system'].includes(messageData.sender_role)) {
+      return { isValid: false, error: 'دور المرسل غير صالح' };
     }
 
-    // Validate role
-    if (!SecurityUtils.isValidRole(messageData.sender_role)) {
-      return { isValid: false, error: 'Invalid sender role' };
+    if (!messageData.content || messageData.content.trim().length === 0) {
+      return { isValid: false, error: 'محتوى الرسالة لا يمكن أن يكون فارغاً' };
+    }
+
+    if (messageData.content.length > 5000) {
+      return { isValid: false, error: 'محتوى الرسالة طويل جداً (الحد الأقصى 5000 حرف)' };
     }
 
     return { isValid: true };
   }
 
-  // Enhanced file validation
-  static validateFileData(file: {
-    name: string;
-    url: string;
-    file_type: string;
-    size_bytes: number;
-  }): { isValid: boolean; error?: string } {
-    // Validate file name
-    if (!file.name || !SecurityUtils.validateFileType(file.name)) {
-      return { isValid: false, error: 'Invalid or unsupported file type' };
+  static handleError(error: any, context: string): any {
+    console.error(`[MessageValidation ${context}] Error:`, error);
+    
+    if (error?.code === 'PGRST116') {
+      return { message: 'البيانات المطلوبة غير موجودة' };
+    }
+    
+    if (error?.code === '42501') {
+      return { message: 'ليس لديك صلاحية للقيام بهذا الإجراء' };
+    }
+    
+    if (error?.code === '23505') {
+      return { message: 'البيانات مكررة' };
     }
 
-    // Validate file size (max 10MB)
-    if (file.size_bytes > 10 * 1024 * 1024) {
-      return { isValid: false, error: 'File size exceeds 10MB limit' };
+    if (error?.message) {
+      return { message: error.message };
     }
 
-    // Validate URL format
-    try {
-      new URL(file.url);
-    } catch {
-      return { isValid: false, error: 'Invalid file URL format' };
+    return { message: 'حدث خطأ غير متوقع' };
+  }
+
+  static sanitizeMessageContent(content: string): string {
+    if (!content || typeof content !== 'string') {
+      return '';
     }
 
-    return { isValid: true };
+    // إزالة HTML tags والمحتوى الضار
+    return content
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+      .replace(/<[^>]*>/g, '')
+      .trim()
+      .substring(0, 5000); // تحديد الحد الأقصى
   }
 }

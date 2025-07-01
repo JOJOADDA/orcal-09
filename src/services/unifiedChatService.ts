@@ -2,6 +2,7 @@
 import { ChatRoom, ChatMessage, OrderFile, MessageFile } from '@/types/database';
 import { chatRoomService } from './chat/ChatRoomService';
 import { messageService } from './chat/MessageService';
+import { designerMessageService } from './chat/DesignerMessageService';
 import { realtimeService } from './chat/RealtimeService';
 import { fileService } from './chat/FileService';
 
@@ -34,6 +35,24 @@ export class UnifiedChatService {
     message_type?: 'text' | 'file' | 'system';
     files?: OrderFile[];
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
+    
+    console.log('=== UNIFIED CHAT SERVICE ===');
+    console.log('Sending message from:', messageData.sender_role, messageData.sender_name);
+
+    // استخدام خدمة المصمم المحسنة للمصممين
+    if (messageData.sender_role === 'designer') {
+      console.log('Using designer message service');
+      return designerMessageService.sendDesignerMessage({
+        order_id: messageData.order_id,
+        sender_id: messageData.sender_id,
+        sender_name: messageData.sender_name,
+        content: messageData.content,
+        message_type: messageData.message_type,
+        files: messageData.files
+      });
+    }
+
+    // استخدام الخدمة العادية للعملاء والإداريين
     return messageService.sendMessage(messageData);
   }
 

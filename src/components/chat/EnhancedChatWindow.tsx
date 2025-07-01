@@ -26,6 +26,7 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
   useEffect(() => {
     console.log('=== EnhancedChatWindow initialized ===');
     console.log('User:', user);
+    console.log('User role:', user.role);
     console.log('Order:', order);
     
     loadMessages();
@@ -95,12 +96,22 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
   };
 
   const handleSendMessage = async (messageContent: string) => {
+    if (!messageContent.trim()) {
+      toast({
+        title: "تنبيه",
+        description: "لا يمكن إرسال رسالة فارغة",
+        variant: "destructive"
+      });
+      return;
+    }
+
     setIsLoading(true);
     
     try {
       console.log('=== Sending message ===');
       console.log('Sender:', user.name, 'Role:', user.role, 'ID:', user.id);
       console.log('Content:', messageContent.substring(0, 50));
+      console.log('Order ID:', order.id);
       
       const result = await unifiedChatService.sendMessage({
         order_id: order.id,
@@ -112,15 +123,22 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
       });
 
       if (!result.success) {
+        console.error('Failed to send message:', result.error);
         throw new Error(result.error?.message || 'فشل في إرسال الرسالة');
       }
       
       console.log('Message sent successfully');
+      
+      // التمرير إلى الأسفل بعد إرسال الرسالة
+      setTimeout(() => {
+        scrollToBottom();
+      }, 100);
+      
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
-        title: "خطأ",
-        description: "فشل في إرسال الرسالة. يرجى المحاولة مرة أخرى.",
+        title: "خطأ في إرسال الرسالة",
+        description: (error as any)?.message || "فشل في إرسال الرسالة. يرجى المحاولة مرة أخرى.",
         variant: "destructive"
       });
       throw error; // Re-throw to let ChatInput handle message restoration
