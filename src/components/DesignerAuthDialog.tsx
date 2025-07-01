@@ -80,21 +80,7 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
     try {
       console.log('Attempting designer login with email:', loginData.email);
       
-      // البحث عن المصمم بالبريد الإلكتروني أولاً للتحقق من وجوده
-      let designer = await designerService.getDesignerByEmail(loginData.email);
-      
-      if (!designer) {
-        toast({
-          title: "غير مصرح",
-          description: "هذا البريد الإلكتروني غير مسجل كمصمم. يرجى إنشاء حساب مصمم أولاً.",
-          variant: "destructive"
-        });
-        return;
-      }
-
-      console.log('Designer found in database:', designer);
-      
-      // محاولة تسجيل الدخول
+      // محاولة تسجيل الدخول مباشرة بدون التحقق من وجود المصمم
       const { data, error } = await authService.signIn(loginData.email, loginData.password, 'email');
       
       if (error) {
@@ -117,29 +103,48 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
       }
 
       if (data.user) {
-        console.log('Auth successful, checking designer linkage for user:', data.user.id);
+        console.log('Auth successful for designer login, user:', data.user.id);
         
-        // التحقق من ربط المصمم بـ user_id
-        if (!designer.user_id || designer.user_id !== data.user.id) {
+        // البحث عن المصمم أو إنشاء ملف تعريف جديد
+        let designer = await designerService.getDesignerByEmail(loginData.email);
+        
+        if (!designer) {
+          console.log('Designer not found, creating new designer profile...');
+          // إنشاء ملف تعريف مصمم جديد تلقائياً
+          const createResult = await designerService.signUpDesigner({
+            email: loginData.email,
+            password: loginData.password,
+            name: data.user.email?.split('@')[0] || 'مصمم جديد',
+            specialization: 'تصميم عام',
+            experienceYears: 0
+          });
+          
+          if (createResult.data) {
+            designer = await designerService.getDesignerByEmail(loginData.email);
+          }
+        }
+        
+        // ربط المصمم بالمستخدم المصادق عليه
+        if (designer && (!designer.user_id || designer.user_id !== data.user.id)) {
           console.log('Linking designer to authenticated user...');
           const linkResult = await designerService.linkDesignerToUser(designer.id, data.user.id);
           if (linkResult.data) {
             designer.user_id = data.user.id;
             console.log('Designer successfully linked to user');
-          } else {
-            console.error('Failed to link designer to user:', linkResult.error);
           }
         }
         
+        const designerName = designer?.name || data.user.email?.split('@')[0] || 'مصمم';
+        
         toast({
           title: "تم تسجيل الدخول بنجاح!",
-          description: `مرحباً ${designer.name}، يمكنك الآن إدارة المشاريع`
+          description: `مرحباً ${designerName}، يمكنك الآن إدارة المشاريع`
         });
         
         onDesignerLogin({ 
-          name: designer.name, 
+          name: designerName, 
           role: 'designer', 
-          email: designer.email 
+          email: loginData.email 
         });
       }
     } catch (error) {
