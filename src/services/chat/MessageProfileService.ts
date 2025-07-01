@@ -11,6 +11,7 @@ export class MessageProfileService {
         .from('profiles')
         .select('id, name, role')
         .eq('id', designerId)
+        .eq('role', 'designer')
         .maybeSingle();
 
       if (fetchError) {
@@ -23,10 +24,34 @@ export class MessageProfileService {
         return true;
       }
 
-      console.log('Designer profile not found - this should not happen for authenticated users');
+      console.log('Designer profile not found or not a designer');
       return false;
     } catch (error) {
       MessageValidationService.handleError(error, 'Verify Designer Profile');
+      return false;
+    }
+  }
+
+  async verifyClientProfile(userId: string): Promise<boolean> {
+    try {
+      console.log('Verifying client profile for user:', userId);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error verifying client profile:', error);
+        return false;
+      }
+
+      const isValid = !!data;
+      console.log('Client profile verification result:', isValid);
+      return isValid;
+    } catch (error) {
+      console.error('Unexpected error in verifyClientProfile:', error);
       return false;
     }
   }

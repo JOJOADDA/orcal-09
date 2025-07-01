@@ -10,35 +10,49 @@ export class FileService {
 
   async uploadFile(file: File, orderId: string, uploaderId: string): Promise<OrderFile | null> {
     try {
-      console.log('Uploading file:', file.name);
+      console.log('Uploading file:', file.name, 'Size:', file.size);
       
-      // محاكاة رفع الملف
-      const fileUrl = `https://api.orcal.app/files/${uploaderId}/${Date.now()}_${file.name}`;
-      
-      const fileData: OrderFile = {
-        id: `file-${Date.now()}`,
-        order_id: orderId,
-        name: file.name,
-        url: fileUrl,
-        file_type: this.getFileType(file.name),
-        size_bytes: file.size,
-        uploaded_at: new Date().toISOString(),
-        uploaded_by: uploaderId
-      };
+      // إنشاء اسم فريد للملف
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${orderId}/${fileName}`;
 
-      const { data, error } = await supabase
-        .from('order_files')
-        .insert(fileData)
-        .select()
-        .single();
+      // رفع الملف إلى Supabase Storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('order-files')
+        .upload(filePath, file);
 
-      if (error) {
-        console.error('Error saving file info:', error);
+      if (uploadError) {
+        console.error('File upload error:', uploadError);
         return null;
       }
 
-      console.log('File uploaded successfully:', fileUrl);
-      return data as OrderFile;
+      // الحصول على URL العام للملف
+      const { data: urlData } = supabase.storage
+        .from('order-files')
+        .getPublicUrl(uploadData.path);
+
+      // حفظ معلومات الملف في قاعدة البيانات
+      const { data: fileRecord, error: dbError } = await supabase
+        .from('order_files')
+        .insert({
+          order_id: orderId,
+          uploaded_by: uploaderId,
+          name: file.name,
+          url: urlData.publicUrl,
+          file_type: this.getFileType(file.name),
+          size_bytes: file.size
+        })
+        .select()
+        .single();
+
+      if (dbError) {
+        console.error('Database save error:', dbError);
+        return null;
+      }
+
+      console.log('File uploaded and saved successfully');
+      return fileRecord as OrderFile;
     } catch (error) {
       this.handleError(error, 'Upload File');
       return null;

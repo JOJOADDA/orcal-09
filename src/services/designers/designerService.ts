@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { CacheService } from '../cache/cacheService';
 
@@ -41,9 +40,6 @@ export class DesignerService extends CacheService {
           data: {
             name: designerData.name,
             phone: designerData.phone || '',
-            specialization: designerData.specialization || 'تصميم عام',
-            experience_years: designerData.experienceYears || 0,
-            portfolio_url: designerData.portfolioUrl || '',
             role: 'designer'
           },
           emailRedirectTo: `${window.location.origin}/`
@@ -53,18 +49,13 @@ export class DesignerService extends CacheService {
       if (data.user && !error) {
         console.log('Designer signup successful for user:', data.user.id);
         
-        // التأكد من إنشاء سجل المصمم في جدول designers مع الربط الصحيح
-        await this.ensureDesignerRecord(data.user.id, {
+        // إنشاء ملف المصمم في جدول profiles
+        await this.ensureDesignerProfile(data.user.id, {
           name: designerData.name,
-          email: designerData.email,
-          phone: designerData.phone || '',
-          specialization: designerData.specialization || 'تصميم عام',
-          experienceYears: designerData.experienceYears || 0,
-          portfolioUrl: designerData.portfolioUrl || ''
+          phone: designerData.phone || ''
         });
         
         this.clearCache('profile');
-        this.clearCache('all_designers');
       }
 
       return { data, error };
@@ -73,50 +64,39 @@ export class DesignerService extends CacheService {
     }
   }
 
-  private async ensureDesignerRecord(userId: string, designerData: any) {
+  private async ensureDesignerProfile(userId: string, designerData: any) {
     try {
-      // التحقق من وجود السجل أولاً
-      const { data: existingRecord } = await supabase
-        .from('designers')
-        .select('id')
-        .eq('user_id', userId)
-        .single();
+      console.log('Creating/updating designer profile for user:', userId);
+      
+      const { error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: userId,
+          name: designerData.name,
+          phone: designerData.phone,
+          role: 'designer'
+        });
 
-      if (!existingRecord) {
-        // إنشاء السجل إذا لم يكن موجوداً
-        const { error } = await supabase
-          .from('designers')
-          .insert({
-            user_id: userId,
-            name: designerData.name,
-            email: designerData.email,
-            phone: designerData.phone,
-            specialization: designerData.specialization,
-            experience_years: designerData.experienceYears,
-            portfolio_url: designerData.portfolioUrl,
-            status: 'active'
-          });
-
-        if (error) {
-          console.error('Error creating designer record:', error);
-        } else {
-          console.log('Designer record created successfully for user:', userId);
-        }
+      if (error) {
+        console.error('Error creating designer profile:', error);
+      } else {
+        console.log('Designer profile created successfully for user:', userId);
       }
     } catch (error) {
-      console.error('Error ensuring designer record:', error);
+      console.error('Error ensuring designer profile:', error);
     }
   }
 
   private async checkExistingDesigner(email: string) {
     try {
+      // نتحقق من وجود مصمم بنفس البريد الإلكتروني
       const { data, error } = await supabase
-        .from('designers')
+        .from('profiles')
         .select('id')
-        .eq('email', email)
-        .single();
-
-      return data && !error;
+        .eq('role', 'designer')
+        .maybeSingle();
+      
+      return !!data && !error;
     } catch (error) {
       return false;
     }
@@ -131,9 +111,10 @@ export class DesignerService extends CacheService {
       console.log('Fetching designer for user:', userId);
       
       const { data, error } = await supabase
-        .from('designers')
+        .from('profiles')
         .select('*')
-        .eq('user_id', userId)
+        .eq('id', userId)
+        .eq('role', 'designer')
         .single();
 
       if (error) {
@@ -152,17 +133,22 @@ export class DesignerService extends CacheService {
 
   async getDesignerByEmail(email: string) {
     try {
-      const cacheKey = `designer_email_${email}`;
-      const cached = this.getFromCache(cacheKey);
-      if (cached) return cached;
-
       console.log('Fetching designer by email:', email);
       
+      // نحصل على المستخدم من الـ auth أولاً
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.log('No authenticated user');
+        return null;
+      }
+
       const { data, error } = await supabase
-        .from('designers')
+        .from('profiles')
         .select('*')
-        .eq('email', email)
-        .maybeSingle(); // استخدام maybeSingle بدلاً من single لتجنب الأخطاء
+        .eq('id', user.id)
+        .eq('role', 'designer')
+        .maybeSingle();
 
       if (error) {
         console.error('Designer fetch by email error:', error);
@@ -170,10 +156,9 @@ export class DesignerService extends CacheService {
       }
       
       if (data) {
-        this.setCache(cacheKey, data);
         console.log('Designer fetched by email successfully:', data);
       } else {
-        console.log('No designer found with email:', email);
+        console.log('No designer found for current user');
       }
       
       return data;
@@ -185,15 +170,12 @@ export class DesignerService extends CacheService {
 
   async getAllDesigners() {
     try {
-      const cacheKey = 'all_designers';
-      const cached = this.getFromCache(cacheKey);
-      if (cached) return cached;
-
       console.log('Fetching all designers');
       
       const { data, error } = await supabase
-        .from('designers')
+        .from('profiles')
         .select('*')
+        .eq('role', 'designer')
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -201,7 +183,6 @@ export class DesignerService extends CacheService {
         return [];
       }
       
-      this.setCache(cacheKey, data);
       console.log('All designers fetched successfully:', data.length);
       return data;
     } catch (error) {
@@ -213,23 +194,19 @@ export class DesignerService extends CacheService {
   async updateDesigner(userId: string, updates: Partial<{
     name: string;
     phone: string;
-    specialization: string;
-    experience_years: number;
-    portfolio_url: string;
-    status: 'active' | 'inactive' | 'pending';
-    user_id: string;
+    avatar_url: string;
   }>) {
     try {
       const { data, error } = await supabase
-        .from('designers')
+        .from('profiles')
         .update(updates)
-        .eq('user_id', userId)
+        .eq('id', userId)
+        .eq('role', 'designer')
         .select()
         .single();
 
       if (!error) {
         this.clearCache(`designer_${userId}`);
-        this.clearCache('all_designers');
       }
 
       return { data, error };
@@ -243,15 +220,14 @@ export class DesignerService extends CacheService {
       console.log('Linking designer to user:', { designerId, userId });
       
       const { data, error } = await supabase
-        .from('designers')
-        .update({ user_id: userId })
-        .eq('id', designerId)
+        .from('profiles')
+        .update({ role: 'designer' })
+        .eq('id', userId)
         .select()
         .single();
 
       if (!error) {
         this.clearCache(`designer_${userId}`);
-        this.clearCache('all_designers');
         console.log('Designer linked successfully:', data);
       } else {
         console.error('Error linking designer:', error);
