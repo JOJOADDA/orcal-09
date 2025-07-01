@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,12 +87,22 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
       if (error) {
         let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
         
-        if (error.message.includes('User already registered')) {
-          errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.";
-        } else if (error.message.includes('Invalid login credentials')) {
-          errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
-        } else if (error.message.includes('Email not confirmed')) {
-          errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً";
+        if (typeof error === 'string') {
+          if (error.includes('User already registered')) {
+            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.";
+          } else if (error.includes('Invalid login credentials')) {
+            errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+          } else if (error.includes('Email not confirmed')) {
+            errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً";
+          }
+        } else if (error.message) {
+          if (error.message.includes('User already registered')) {
+            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً. يرجى تسجيل الدخول بدلاً من إنشاء حساب جديد.";
+          } else if (error.message.includes('Invalid login credentials')) {
+            errorMessage = "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+          } else if (error.message.includes('Email not confirmed')) {
+            errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً";
+          }
         }
         
         toast({
@@ -102,7 +113,7 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         console.log('Auth successful for designer login, user:', data.user.id);
         
         // البحث عن المصمم أو إنشاء ملف تعريف جديد
@@ -214,11 +225,20 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
       if (error) {
         let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
         
-        if (error.message.includes('User already registered') || 
-            error.message.includes('Designer already exists')) {
-          errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً";
-        } else if (error.message.includes('Password should be at least 6 characters')) {
-          errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+        if (typeof error === 'string') {
+          if (error.includes('User already registered') || 
+              error.includes('Designer already exists')) {
+            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً";
+          } else if (error.includes('Password should be at least 6 characters')) {
+            errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+          }
+        } else if (error.message) {
+          if (error.message.includes('User already registered') || 
+              error.message.includes('Designer already exists')) {
+            errorMessage = "هذا البريد الإلكتروني مسجل مسبقاً";
+          } else if (error.message.includes('Password should be at least 6 characters')) {
+            errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+          }
         }
         
         toast({
@@ -229,7 +249,7 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         toast({
           title: "تم إنشاء الحساب بنجاح!",
           description: "تم إنشاء حساب المصمم بنجاح. يمكنك الآن تسجيل الدخول",

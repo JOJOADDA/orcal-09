@@ -121,15 +121,24 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       if (error) {
         let errorMessage = "حدث خطأ أثناء إنشاء الحساب";
         
-        if (error.message.includes('Invalid login credentials')) {
-          errorMessage = "المستخدم موجود مسبقاً ولكن كلمة المرور غير صحيحة";
-        } else if (error.message.includes('User already registered') || 
-            error.message.includes('already exists')) {
-          errorMessage = "هذا الحساب مسجل مسبقاً. تم تسجيل الدخول تلقائياً.";
-        } else if (error.message.includes('Password should be at least 6 characters')) {
-          errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
-        } else if (error.message.includes('Invalid email')) {
-          errorMessage = "البريد الإلكتروني غير صحيح";
+        if (typeof error === 'string') {
+          if (error.includes('Invalid login credentials')) {
+            errorMessage = "المستخدم موجود مسبقاً ولكن كلمة المرور غير صحيحة";
+          } else if (error.includes('User already registered') || 
+              error.includes('already exists')) {
+            errorMessage = "هذا الحساب مسجل مسبقاً. تم تسجيل الدخول تلقائياً.";
+          }
+        } else if (error.message) {
+          if (error.message.includes('Invalid login credentials')) {
+            errorMessage = "المستخدم موجود مسبقاً ولكن كلمة المرور غير صحيحة";
+          } else if (error.message.includes('User already registered') || 
+              error.message.includes('already exists')) {
+            errorMessage = "هذا الحساب مسجل مسبقاً. تم تسجيل الدخول تلقائياً.";
+          } else if (error.message.includes('Password should be at least 6 characters')) {
+            errorMessage = "كلمة المرور يجب أن تكون 6 أحرف على الأقل";
+          } else if (error.message.includes('Invalid email')) {
+            errorMessage = "البريد الإلكتروني غير صحيح";
+          }
         }
         
         console.error('Signup error details:', error);
@@ -141,7 +150,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         toast({
           title: "تم بنجاح!",
           description: "مرحباً بك في أوركال للدعاية والإعلان"
@@ -185,14 +194,24 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
       if (error) {
         let errorMessage = "حدث خطأ أثناء تسجيل الدخول";
         
-        if (error.message.includes('Email not confirmed')) {
-          errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً. تحقق من صندوق الوارد الخاص بك.";
-        } else if (error.message.includes('Invalid login credentials')) {
-          errorMessage = identifierType === 'email' 
-            ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
-            : "رقم الهاتف أو كلمة المرور غير صحيحة";
-        } else if (error.message.includes('Too many requests')) {
-          errorMessage = "تم إرسال طلبات كثيرة. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.";
+        if (typeof error === 'string') {
+          if (error.includes('Email not confirmed')) {
+            errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً. تحقق من صندوق الوارد الخاص بك.";
+          } else if (error.includes('Invalid login credentials')) {
+            errorMessage = identifierType === 'email' 
+              ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+              : "رقم الهاتف أو كلمة المرور غير صحيحة";
+          }
+        } else if (error.message) {
+          if (error.message.includes('Email not confirmed')) {
+            errorMessage = "يرجى تأكيد البريد الإلكتروني أولاً. تحقق من صندوق الوارد الخاص بك.";
+          } else if (error.message.includes('Invalid login credentials')) {
+            errorMessage = identifierType === 'email' 
+              ? "البريد الإلكتروني أو كلمة المرور غير صحيحة"
+              : "رقم الهاتف أو كلمة المرور غير صحيحة";
+          } else if (error.message.includes('Too many requests')) {
+            errorMessage = "تم إرسال طلبات كثيرة. يرجى الانتظار قليلاً قبل المحاولة مرة أخرى.";
+          }
         }
         
         toast({
@@ -203,7 +222,7 @@ const AuthPage = ({ onAuthSuccess }: AuthPageProps) => {
         return;
       }
 
-      if (data.user) {
+      if (data?.user) {
         toast({
           title: "تم تسجيل الدخول بنجاح!",
           description: "مرحباً بك في أوركال للدعاية والإعلان"

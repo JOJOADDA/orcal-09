@@ -1,151 +1,99 @@
-// Enhanced auth service with security improvements
-import { supabase } from '@/integrations/supabase/client';
-import { SecurityUtils } from '@/utils/security';
-import { SecurityService } from '@/services/security/securityService';
 
-export class AuthService {
-  async getCurrentSession() {
+import { supabase } from '@/integrations/supabase/client';
+import { Profile } from '@/types/database';
+
+class AuthService {
+  async signUp(identifier: string, password: string, name: string, phone: string = '') {
     try {
-      const { data, error } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.signUp({
+        email: identifier,
+        password,
+        options: {
+          data: {
+            name,
+            phone
+          }
+        }
+      });
 
       if (error) {
-        console.error('Error getting current session:', error);
-        return null;
+        return { data: null, error, success: false };
       }
 
-      return data?.session;
-    } catch (error) {
-      console.error('Unexpected error getting session:', error);
-      return null;
+      return { data, error: null, success: true };
+    } catch (error: any) {
+      return { data: null, error: error.message || 'Signup failed', success: false };
+    }
+  }
+
+  async signIn(identifier: string, password: string, type: 'email' | 'phone' = 'email') {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: identifier,
+        password
+      });
+
+      if (error) {
+        return { data: null, error, success: false };
+      }
+
+      return { data, error: null, success: true };
+    } catch (error: any) {
+      return { data: null, error: error.message || 'Login failed', success: false };
+    }
+  }
+
+  async signOut() {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        return { error, success: false };
+      }
+      return { error: null, success: true };
+    } catch (error: any) {
+      return { error: error.message || 'Signout failed', success: false };
     }
   }
 
   async getCurrentUser() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
-
-      if (error) {
-        console.error('Error getting current user:', error);
-        return null;
+      
+      if (error || !user) {
+        return { user: null, profile: null, error };
       }
 
-      return user;
-    } catch (error) {
-      console.error('Unexpected error getting user:', error);
-      return null;
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      return { user, profile, error: profileError };
+    } catch (error: any) {
+      return { user: null, profile: null, error: error.message };
     }
   }
 
-  async signIn(phone: string) {
+  async getCurrentSession() {
     try {
-      const email = SecurityUtils.generateSecureEmailFromPhone(phone);
-      const { data, error } = await supabase.auth.signInWithOtp({
+      const { data: { session }, error } = await supabase.auth.getSession();
+      return { session, error };
+    } catch (error: any) {
+      return { session: null, error: error.message };
+    }
+  }
+
+  async resendConfirmation(email: string) {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
         email
       });
-
-      if (error) {
-        console.error('Error signing in:', error);
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, data };
-    } catch (error) {
-      console.error('Unexpected error signing in:', error);
-      return { success: false, error: 'Failed to sign in' };
+      return { error };
+    } catch (error: any) {
+      return { error: error.message };
     }
-  }
-
-  async signUp(userData: {
-    name: string;
-    phone: string;
-    role?: 'client' | 'admin' | 'designer';
-  }): Promise<{ success: boolean; error?: string; user?: any }> {
-    try {
-      // Enhanced validation using SecurityUtils
-      const phoneValidation = SecurityUtils.validatePhoneNumber(userData.phone);
-      if (!phoneValidation.isValid) {
-        return { success: false, error: phoneValidation.error };
-      }
-
-      // Sanitize name input
-      const sanitizedName = SecurityUtils.sanitizeHtml(userData.name.trim());
-      if (!sanitizedName || sanitizedName.length < 2) {
-        return { success: false, error: 'Name must be at least 2 characters long' };
-      }
-
-      // Validate role
-      const role = userData.role || 'client';
-      if (!SecurityUtils.isValidRole(role)) {
-        return { success: false, error: 'Invalid user role' };
-      }
-
-      // Rate limiting
-      if (!SecurityUtils.checkRateLimit(`signup_${userData.phone}`, 3, 15 * 60 * 1000)) {
-        await SecurityService.logSecurityEvent('SIGNUP_RATE_LIMIT_EXCEEDED', 'auth', undefined, { phone: userData.phone });
-        return { success: false, error: 'Too many signup attempts. Please try again later.' };
-      }
-
-      // Generate secure email from phone
-      const email = SecurityUtils.generateSecureEmailFromPhone(userData.phone);
-      const password = `temp_${userData.phone.replace(/\D/g, '')}_${Date.now()}`;
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: sanitizedName,
-            phone: userData.phone,
-            role: role
-          }
-        }
-      });
-
-      if (error) {
-        await SecurityService.logSecurityEvent('SIGNUP_FAILED', 'auth', undefined, { 
-          phone: userData.phone, 
-          error: error.message 
-        });
-        
-        // Don't expose internal errors
-        return { success: false, error: 'Registration failed. Please try again.' };
-      }
-
-      await SecurityService.logSecurityEvent('USER_SIGNUP_SUCCESS', 'auth', data.user?.id, {
-        role: role,
-        phone: userData.phone
-      });
-
-      return { success: true, user: data.user };
-    } catch (error) {
-      console.error('Signup error:', error);
-      return { success: false, error: 'Registration failed' };
-    }
-  }
-
-  async signOut(): Promise<{ success: boolean; error?: string }> {
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      const { error } = await supabase.auth.signOut();
-      
-      if (error) {
-        return { success: false, error: 'Sign out failed' };
-      }
-
-      if (user) {
-        await SecurityService.logSecurityEvent('USER_SIGNOUT', 'auth', user.id);
-      }
-
-      return { success: true };
-    } catch (error) {
-      console.error('Sign out error:', error);
-      return { success: false, error: 'Sign out failed' };
-    }
-  }
-
-  async clearAllCache() {
-    // Clear all cache
   }
 }
 

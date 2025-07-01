@@ -48,7 +48,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
         throw error;
       }
 
-      if (data.user) {
+      if (data?.user) {
         toast({
           title: "مرحباً بك!",
           description: `أهلاً ${formData.name}، تم تسجيل الدخول بنجاح`
@@ -70,7 +70,7 @@ const LoginForm = ({ onLogin }: LoginFormProps) => {
     // Create a mock admin login
     try {
       const { data, error } = await supabaseService.signIn('admin@orcal.app', 'admin123');
-      if (data.user && !error) {
+      if (data?.user && !error) {
         onLogin(data.user.id);
       }
     } catch (error) {
