@@ -1,34 +1,22 @@
 
+import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { CardHeader } from '@/components/ui/card';
 import { 
-  Phone, Video, MoreVertical, X, Settings, 
-  Info, Search, Archive 
+  X, Phone, Video, MoreVertical
 } from 'lucide-react';
-import { DesignOrder, Profile } from '@/types/database';
+import { DesignOrder } from '@/types/database';
 import { cn } from '@/lib/utils';
 
 interface ChatHeaderProps {
   order: DesignOrder;
-  user: Profile;
   onlineStatus: boolean;
   onClose: () => void;
-  onCall?: () => void;
-  onVideoCall?: () => void;
-  onSettings?: () => void;
 }
 
-const ChatHeader = ({ 
-  order, 
-  user, 
-  onlineStatus, 
-  onClose,
-  onCall,
-  onVideoCall,
-  onSettings 
-}: ChatHeaderProps) => {
+const ChatHeader = ({ order, onlineStatus, onClose }: ChatHeaderProps) => {
   const getStatusColor = (status: DesignOrder['status']) => {
     const colors = {
       'pending': 'bg-yellow-500',
@@ -54,14 +42,13 @@ const ChatHeader = ({
   };
 
   return (
-    <div className="flex flex-row items-center justify-between space-y-0 p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
       <div className="flex items-center gap-3">
-        <Avatar className="h-12 w-12 border-2 border-white/20">
-          <AvatarFallback className="bg-white/10 text-white font-semibold text-sm">
+        <Avatar className="h-10 w-10 border-2 border-white/20">
+          <AvatarFallback className="bg-white/10 text-white font-semibold">
             {order.client_name ? getInitials(order.client_name) : 'ع'}
           </AvatarFallback>
         </Avatar>
-        
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
             <h3 className="font-semibold text-lg">{order.design_type}</h3>
@@ -74,7 +61,6 @@ const ChatHeader = ({
               {getStatusText(order.status)}
             </Badge>
           </div>
-          
           <div className="flex items-center gap-2 text-sm text-white/80">
             <span>العميل: {order.client_name}</span>
             <span>•</span>
@@ -83,50 +69,23 @@ const ChatHeader = ({
                 "w-2 h-2 rounded-full",
                 onlineStatus ? "bg-green-400" : "bg-gray-400"
               )} />
-              {onlineStatus ? "متصل الآن" : "آخر ظهور منذ قليل"}
+              {onlineStatus ? "متصل" : "غير متصل"}
             </span>
           </div>
         </div>
       </div>
       
-      <div className="flex items-center gap-1">
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-white hover:bg-white/10"
-          onClick={onCall}
-        >
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
           <Phone className="w-4 h-4" />
         </Button>
-        
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-white hover:bg-white/10"
-          onClick={onVideoCall}
-        >
+        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
           <Video className="w-4 h-4" />
         </Button>
-        
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-white hover:bg-white/10"
-        >
-          <Search className="w-4 h-4" />
+        <Button variant="ghost" size="sm" className="text-white hover:bg-white/10">
+          <MoreVertical className="w-4 h-4" />
         </Button>
-        
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="text-white hover:bg-white/10"
-          onClick={onSettings}
-        >
-          <Settings className="w-4 h-4" />
-        </Button>
-        
-        <Separator orientation="vertical" className="h-6 bg-white/20 mx-1" />
-        
+        <Separator orientation="vertical" className="h-6 bg-white/20" />
         <Button
           variant="ghost"
           size="sm"
@@ -136,7 +95,7 @@ const ChatHeader = ({
           <X className="w-4 h-4" />
         </Button>
       </div>
-    </div>
+    </CardHeader>
   );
 };
 
