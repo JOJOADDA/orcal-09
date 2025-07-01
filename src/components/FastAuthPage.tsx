@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { User, Lock, Eye, EyeOff, Mail } from 'lucide-react';
 import { useOptimizedAuth } from '@/hooks/useOptimizedAuth';
+import { optimizedSupabaseService } from '@/services/optimizedSupabaseService';
 import { useToast } from '@/hooks/use-toast';
 
 interface FastAuthPageProps {
@@ -78,22 +79,22 @@ const FastAuthPage = ({ onAuthSuccess }: FastAuthPageProps) => {
 
     setIsLoading(true);
     try {
-      const { data, error } = await supabaseService.signUp(
+      const result = await optimizedSupabaseService.signUp(
         signupData.email,
         signupData.password,
         signupData.name
       );
 
-      if (error) {
+      if (result.error) {
         toast({
           title: "فشل التسجيل",
-          description: "حدث خطأ أثناء إنشاء الحساب",
+          description: result.error,
           variant: "destructive"
         });
         return;
       }
 
-      if (data?.user) {
+      if (result.success) {
         toast({ title: "تم إنشاء الحساب بنجاح!" });
         setTimeout(() => onAuthSuccess(), 1000);
       }
