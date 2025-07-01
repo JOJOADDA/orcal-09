@@ -24,42 +24,32 @@ export class UnifiedChatService {
     return uuidRegex.test(uuid);
   }
 
-  // إنشاء ملف تعريف مصمم موثوق
-  private async ensureDesignerProfile(designerName: string, designerId: string): Promise<boolean> {
+  // التحقق من وجود ملف تعريف المصمم بدلاً من إنشائه
+  private async verifyDesignerProfile(designerId: string): Promise<boolean> {
     try {
-      console.log('Ensuring designer profile exists:', { name: designerName, id: designerId });
+      console.log('Verifying designer profile exists:', designerId);
       
-      // محاولة جلب الملف الموجود
+      // التحقق من وجود الملف الموجود فقط
       const { data: existingProfile, error: fetchError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, name, role')
         .eq('id', designerId)
         .maybeSingle();
 
-      if (existingProfile && !fetchError) {
-        console.log('Designer profile already exists');
-        return true;
-      }
-
-      // إنشاء ملف تعريف جديد
-      const { error: insertError } = await supabase
-        .from('profiles')
-        .insert({
-          id: designerId,
-          name: designerName,
-          phone: '+249123456789',
-          role: 'admin' // استخدام admin في قاعدة البيانات
-        });
-
-      if (insertError) {
-        console.error('Error creating designer profile:', insertError);
+      if (fetchError) {
+        console.error('Error checking designer profile:', fetchError);
         return false;
       }
 
-      console.log('Designer profile created successfully');
-      return true;
+      if (existingProfile) {
+        console.log('Designer profile verified:', existingProfile);
+        return true;
+      }
+
+      console.log('Designer profile not found - this should not happen for authenticated users');
+      return false;
     } catch (error) {
-      console.error('Error ensuring designer profile:', error);
+      console.error('Error verifying designer profile:', error);
       return false;
     }
   }
@@ -202,12 +192,12 @@ export class UnifiedChatService {
         return { success: false, error: { message: 'Invalid sender ID format' } };
       }
 
-      // للمصممين: التأكد من وجود ملف التعريف
+      // للمصممين: التحقق من وجود ملف التعريف فقط (بدون إنشاء)
       if (messageData.sender_role === 'designer') {
-        const profileExists = await this.ensureDesignerProfile(messageData.sender_name, messageData.sender_id);
+        const profileExists = await this.verifyDesignerProfile(messageData.sender_id);
         if (!profileExists) {
-          console.error('Failed to ensure designer profile');
-          return { success: false, error: { message: 'Failed to create designer profile' } };
+          console.error('Designer profile verification failed');
+          return { success: false, error: { message: 'Designer profile not found. Please ensure you are logged in properly.' } };
         }
       }
 
