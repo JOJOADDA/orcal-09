@@ -3,7 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { MessageSquare } from 'lucide-react';
 import { ChatMessage as ChatMessageType, Profile } from '@/types/database';
-import ChatMessage from './ChatMessage';
+import EnhancedChatMessage from './EnhancedChatMessage';
 
 interface ChatMessagesProps {
   messages: ChatMessageType[];
@@ -46,12 +46,14 @@ const ChatMessages = ({ messages, user, isLoadingMessages, isTyping, messagesEnd
           const showName = !isOwnMessage && showAvatar;
           
           return (
-            <ChatMessage
+            <EnhancedChatMessage
               key={message.id}
               message={message}
-              user={user}
+              isOwnMessage={isOwnMessage}
               showAvatar={showAvatar}
               showName={showName}
+              currentUserId={user.id}
+              currentUserRole={user.role}
             />
           );
         })}

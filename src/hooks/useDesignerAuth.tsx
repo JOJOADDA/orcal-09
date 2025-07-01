@@ -28,14 +28,17 @@ export const useDesignerAuth = () => {
 
   const handleDesignerLogout = useCallback(async () => {
     try {
+      console.log('Designer logout initiated');
       await supabaseService.signOut();
       setDesignerUser(null);
       setIsDesignerAuthenticated(false);
+      console.log('Designer logout completed successfully');
     } catch (error) {
       console.error('Error during designer logout:', error);
       // Force logout even if there's an error
       setDesignerUser(null);
       setIsDesignerAuthenticated(false);
+      console.log('Designer logout forced due to error');
     }
   }, []);
 

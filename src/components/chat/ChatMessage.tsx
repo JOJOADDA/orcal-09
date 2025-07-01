@@ -80,10 +80,12 @@ const ChatMessage = ({ message, user, showAvatar, showName }: ChatMessageProps) 
           className={cn(
             "rounded-2xl px-4 py-2 max-w-full break-words",
             isOwnMessage
-              ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md"
+              ? "bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-br-md ml-4"
               : message.sender_role === 'system'
               ? "bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-bl-md"
-              : "bg-white text-gray-900 shadow-sm border border-gray-200 rounded-bl-md"
+              : message.sender_role === 'designer'
+              ? "bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-bl-md mr-4"
+              : "bg-white text-gray-900 shadow-sm border border-gray-200 rounded-bl-md mr-4"
           )}
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap">

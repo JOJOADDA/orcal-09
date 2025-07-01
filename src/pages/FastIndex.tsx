@@ -1,10 +1,12 @@
 
 import { Suspense, lazy } from 'react';
 import { useOptimizedAuth } from '@/hooks/useOptimizedAuth';
+import { useRoleValidation } from '@/hooks/useRoleValidation';
 import LoadingScreen from '@/components/LoadingScreen';
 import DesignerLoginButton from '@/components/DesignerLoginButton';
 import DesignerAuthDialog from '@/components/DesignerAuthDialog';
 import { useDesignerAuth } from '@/hooks/useDesignerAuth';
+import { useToast } from '@/hooks/use-toast';
 
 // تحميل كسول للمكونات الكبيرة
 const FastAuthPage = lazy(() => import('@/components/FastAuthPage'));
@@ -14,6 +16,8 @@ const DesignerDashboard = lazy(() => import('@/components/DesignerDashboard'));
 
 const FastIndex = () => {
   const { currentUser, isAuthenticated, isInitializing } = useOptimizedAuth();
+  const { isValidRole, roleError, isClient, isDesigner, isAdmin } = useRoleValidation({ user: currentUser });
+  const { toast } = useToast();
   const {
     designerUser,
     isDesignerAuthenticated,
@@ -59,19 +63,59 @@ const FastIndex = () => {
     );
   }
 
+  // التحقق من صحة الدور
+  if (!isValidRole) {
+    if (roleError) {
+      toast({
+        title: "خطأ في صحة المستخدم",
+        description: roleError,
+        variant: "destructive"
+      });
+    }
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-red-600 mb-4">خطأ في التحقق من المستخدم</h2>
+          <p className="text-red-500 mb-4">{roleError}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+          >
+            إعادة المحاولة
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // وظيفة تسجيل الخروج المحسنة
+  const handleLogout = async () => {
+    try {
+      await handleDesignerLogout(); // تسجيل خروج المصمم أولاً
+      window.location.reload(); // إعادة تحميل الصفحة لإعادة تعيين الحالة
+    } catch (error) {
+      console.error('Error during logout:', error);
+      window.location.reload(); // إعادة تحميل في حالة الخطأ أيضاً
+    }
+  };
+
   // عرض لوحة التحكم المناسبة حسب نوع المستخدم
   return (
     <div className="relative">
       <Suspense fallback={<LoadingScreen />}>
-        {currentUser.role === 'admin' ? (
-          <AdminDashboard user={currentUser} onLogout={() => window.location.reload()} />
-        ) : currentUser.role === 'designer' ? (
-          <DesignerDashboard designerData={currentUser} onLogout={() => window.location.reload()} />
+        {isAdmin ? (
+          <AdminDashboard user={currentUser} onLogout={handleLogout} />
+        ) : isDesigner ? (
+          <DesignerDashboard designerData={currentUser} onLogout={handleLogout} />
+        ) : isClient ? (
+          <ClientDashboard user={currentUser} onLogout={handleLogout} />
         ) : (
-          <ClientDashboard user={currentUser} onLogout={() => window.location.reload()} />
+          <div className="min-h-screen flex items-center justify-center">
+            <p className="text-red-600">نوع مستخدم غير معروف</p>
+          </div>
         )}
       </Suspense>
-      <DesignerLoginButton onShowDesignerAuth={() => setShowDesignerAuth(true)} />
+      {!isDesigner && <DesignerLoginButton onShowDesignerAuth={() => setShowDesignerAuth(true)} />}
     </div>
   );
 };
