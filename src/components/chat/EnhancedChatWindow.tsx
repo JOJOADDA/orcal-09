@@ -134,6 +134,7 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
       <Card className="w-full max-w-4xl h-[85vh] bg-white shadow-2xl flex flex-col border-0 overflow-hidden">
         <ChatHeader 
           order={order}
+          user={user}
           onlineStatus={onlineStatus}
           onClose={onClose}
         />
