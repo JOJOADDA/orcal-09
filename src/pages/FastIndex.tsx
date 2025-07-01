@@ -64,14 +64,7 @@ const FastIndex = () => {
   }
 
   // التحقق من صحة الدور
-  if (!isValidRole) {
-    if (roleError) {
-      toast({
-        title: "خطأ في صحة المستخدم",
-        description: roleError,
-        variant: "destructive"
-      });
-    }
+  if (!isValidRole && roleError) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-red-50 to-red-100">
         <div className="text-center">

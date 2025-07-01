@@ -32,7 +32,7 @@ export const useRoleValidation = ({ user }: UseRoleValidationProps) => {
           .from('profiles')
           .select('role, id')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) {
           console.error('Error verifying user role:', error);
