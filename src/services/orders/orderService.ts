@@ -80,32 +80,58 @@ export class OrderService extends CacheService {
 
   async getAllOrders(): Promise<DesignOrder[]> {
     try {
-      const cacheKey = 'all_orders';
-      const cached = this.getFromCache(cacheKey);
-      if (cached) return cached;
-
       console.log('Fetching all orders');
       
-      const { data, error } = await supabase
-        .from('design_orders')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // الحصول على معلومات المستخدم الحالي
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('No authenticated user');
+        return [];
+      }
+
+      // التحقق من دور المستخدم
+      const { data: userProfile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      let data, error;
+
+      if (userProfile?.role === 'designer' || userProfile?.role === 'admin') {
+        // للمصممين والإداريين: الحصول على جميع الطلبات باستخدام الدالة المحسنة
+        console.log('Fetching all orders for designer/admin');
+        const result = await supabase.rpc('get_all_orders_for_designers');
+        data = result.data;
+        error = result.error;
+      } else {
+        // للعملاء: الحصول على طلباتهم فقط
+        console.log('Fetching orders for client:', user.id);
+        const result = await supabase
+          .from('design_orders')
+          .select('*')
+          .eq('client_id', user.id)
+          .order('created_at', { ascending: false });
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) {
+        console.error('Error fetching orders:', error);
         this.handleError(error, 'Get All Orders');
         return [];
       }
       
-      const orders = data.map(order => ({
+      const orders = data?.map(order => ({
         ...order,
         status: order.status as 'pending' | 'in-progress' | 'completed' | 'delivered',
         priority: order.priority as 'low' | 'medium' | 'high'
-      })) as DesignOrder[];
+      })) as DesignOrder[] || [];
 
-      this.setCache(cacheKey, orders);
-      console.log('All orders fetched successfully:', orders.length);
+      console.log('Orders fetched successfully:', orders.length);
       return orders;
     } catch (error) {
+      console.error('Unexpected error fetching orders:', error);
       this.handleError(error, 'Get All Orders');
       return [];
     }

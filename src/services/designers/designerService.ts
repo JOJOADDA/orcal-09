@@ -115,15 +115,43 @@ export class DesignerService extends CacheService {
         .select('*')
         .eq('id', userId)
         .eq('role', 'designer')
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Designer fetch error:', error);
         return null;
       }
+
+      if (!data) {
+        console.log('Designer not found, checking if user exists in profiles');
+        // التحقق من وجود المستخدم في جدول profiles
+        const { data: userProfile, error: profileError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+
+        if (profileError) {
+          console.error('Error checking user profile:', profileError);
+          return null;
+        }
+
+        if (userProfile && userProfile.role !== 'designer') {
+          console.log('User exists but is not a designer:', userProfile.role);
+          return null;
+        }
+
+        if (!userProfile) {
+          console.log('User profile not found, this should not happen for authenticated users');
+          return null;
+        }
+      }
       
-      this.setCache(cacheKey, data);
-      console.log('Designer fetched successfully:', data);
+      if (data) {
+        this.setCache(cacheKey, data);
+        console.log('Designer fetched successfully:', data);
+      }
+      
       return data;
     } catch (error) {
       this.handleError(error, 'Get Designer');

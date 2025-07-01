@@ -38,11 +38,40 @@ export class DesignerMessageService {
         .select('id, name, role')
         .eq('id', messageData.sender_id)
         .eq('role', 'designer')
-        .single();
+        .maybeSingle();
 
-      if (designerError || !designerProfile) {
-        console.error('Designer profile not found:', designerError);
-        return { success: false, error: { message: 'ملف المصمم غير موجود. يرجى تسجيل الدخول مرة أخرى.' } };
+      if (designerError) {
+        console.error('Error checking designer profile:', designerError);
+        return { success: false, error: { message: 'خطأ في التحقق من ملف المصمم: ' + designerError.message } };
+      }
+
+      if (!designerProfile) {
+        console.error('Designer profile not found for user:', messageData.sender_id);
+        
+        // التحقق من وجود المستخدم في جدول profiles بأي دور
+        const { data: userProfile, error: userError } = await supabase
+          .from('profiles')
+          .select('id, name, role')
+          .eq('id', messageData.sender_id)
+          .maybeSingle();
+
+        if (userError) {
+          console.error('Error checking user profile:', userError);
+          return { success: false, error: { message: 'خطأ في التحقق من ملف المستخدم: ' + userError.message } };
+        }
+
+        if (!userProfile) {
+          console.error('User profile not found:', messageData.sender_id);
+          return { success: false, error: { message: 'ملف المستخدم غير موجود. يرجى تسجيل الدخول مرة أخرى.' } };
+        }
+
+        if (userProfile.role !== 'designer') {
+          console.error('User is not a designer:', userProfile.role);
+          return { success: false, error: { message: 'المستخدم ليس مصمم. الدور الحالي: ' + userProfile.role } };
+        }
+
+        // إذا وصلنا هنا، فهناك مشكلة في استعلام البيانات
+        return { success: false, error: { message: 'خطأ غير متوقع في التحقق من ملف المصمم' } };
       }
 
       console.log('Designer profile verified:', designerProfile);

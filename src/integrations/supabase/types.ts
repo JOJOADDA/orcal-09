@@ -332,9 +332,30 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_all_orders_for_designers: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          client_id: string
+          client_name: string
+          client_phone: string
+          design_type: string
+          description: string
+          status: string
+          priority: string
+          total_price: number
+          estimated_delivery: string
+          created_at: string
+          updated_at: string
+        }[]
+      }
       get_current_user_role: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      is_designer: {
+        Args: { user_id?: string }
+        Returns: boolean
       }
       is_order_participant: {
         Args: { order_id: string }

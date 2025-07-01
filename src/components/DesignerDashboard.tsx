@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
 import EnhancedChatWindow from './chat/EnhancedChatWindow';
 import { useToast } from '@/hooks/use-toast';
-import { orderService } from '@/services/orders/orderService';
+import { orderDesignerService } from '@/services/orders/OrderDesignerService';
+import { DesignerProfileService } from '@/services/designers/designerProfileService';
 import DesignerHeader from './designer/DesignerHeader';
 import DesignerStats from './designer/DesignerStats';
 import OrdersList from './designer/OrdersList';
@@ -39,7 +40,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     setIsLoading(true);
     try {
       console.log('Loading orders for designer dashboard');
-      const allOrders = await orderService.getAllOrders();
+      const allOrders = await orderDesignerService.getAllOrdersForDesigner();
       console.log('Loaded orders:', allOrders.length);
       console.log('Sample orders:', allOrders.slice(0, 2));
       setOrders(allOrders);

@@ -1,6 +1,7 @@
 
 import { useState, useCallback } from 'react';
 import { supabaseService } from '@/services/supabaseService';
+import { supabase } from '@/integrations/supabase/client';
 
 export const useDesignerAuth = () => {
   const [designerUser, setDesignerUser] = useState<any>(null);
@@ -8,10 +9,21 @@ export const useDesignerAuth = () => {
   const [showDesignerAuth, setShowDesignerAuth] = useState(false);
 
   // Designer authentication handlers
-  const handleDesignerLogin = useCallback(async (designerData: { name: string; role: string; email: string }) => {
+  const handleDesignerLogin = useCallback(async (designerData: { name: string; role: string; email?: string; id?: string }) => {
+    console.log('Designer login handler called with:', designerData);
+    
+    // إذا لم يكن هناك ID، استخدم ID المستخدم المصادق عليه الحالي
+    if (!designerData.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        designerData.id = user.id;
+      }
+    }
+    
     setDesignerUser(designerData);
     setIsDesignerAuthenticated(true);
     setShowDesignerAuth(false);
+    console.log('Designer authenticated successfully');
   }, []);
 
   const handleDesignerLogout = useCallback(async () => {

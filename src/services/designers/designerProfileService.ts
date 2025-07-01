@@ -1,62 +1,141 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
 
 export class DesignerProfileService {
-  // إنشاء UUID ثابت ومعروف للمصمم بناءً على اسمه
-  static generateDesignerUUID(designerName: string): string {
-    // استخدام خوارزمية بسيطة لإنشاء UUID ثابت من الاسم
-    const cleanName = designerName.trim().toLowerCase().replace(/\s+/g, '');
-    const nameBuffer = new TextEncoder().encode(cleanName);
-    
-    // إنشاء hash بسيط
-    let hash = 0;
-    for (let i = 0; i < nameBuffer.length; i++) {
-      hash = ((hash << 5) - hash + nameBuffer[i]) & 0xffffffff;
-    }
-    
-    // تحويل إلى UUID format
-    const hex = Math.abs(hash).toString(16).padStart(8, '0');
-    return `${hex.substr(0, 8)}-${hex.substr(0, 4)}-4${hex.substr(1, 3)}-8${hex.substr(0, 3)}-${hex}${hex}`.substr(0, 36);
-  }
-
-  // إنشاء ملف تعريف مصمم بسيط وموثوق
-  static async createDesignerProfile(designerName: string): Promise<Profile> {
-    const designerUUID = this.generateDesignerUUID(designerName);
-    
-    console.log('Creating designer profile:', { name: designerName, id: designerUUID });
-    
-    const designerProfile: Profile = {
-      id: designerUUID,
-      name: designerName,
-      phone: '+249123456789',
-      role: 'designer',
-      avatar_url: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-
-    // محاولة إنشاء الملف في قاعدة البيانات (اختيارية)
+  // إنشاء أو جلب ملف تعريف المصمم للمستخدم المصادق عليه
+  static async createDesignerProfile(designerName?: string): Promise<Profile | null> {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .upsert(designerProfile, { onConflict: 'id' });
+      console.log('Creating/fetching designer profile');
       
-      if (error) {
-        console.warn('Could not save designer profile to database:', error);
+      // الحصول على المستخدم المصادق عليه الحالي
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        console.error('No authenticated user found:', authError);
+        throw new Error('يجب تسجيل الدخول أولاً');
+      }
+
+      console.log('Authenticated user:', user.id);
+
+      // البحث عن ملف المصمم الموجود
+      const { data: existingProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error fetching existing profile:', fetchError);
+        throw new Error('خطأ في جلب ملف المصمم');
+      }
+
+      if (existingProfile) {
+        console.log('Found existing profile:', existingProfile);
+        
+        // التأكد من أن المستخدم مصمم
+        if (existingProfile.role === 'designer') {
+          return existingProfile as Profile;
+        } else {
+          // تحديث دور المستخدم ليصبح مصمم
+          console.log('Updating user role to designer');
+          const { data: updatedProfile, error: updateError } = await supabase
+            .from('profiles')
+            .update({ 
+              role: 'designer',
+              name: designerName || existingProfile.name || 'مصمم',
+              updated_at: new Date().toISOString() 
+            })
+            .eq('id', user.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('Error updating profile to designer:', updateError);
+            throw new Error('فشل في تحديث ملف المصمم');
+          }
+
+          console.log('Profile updated to designer:', updatedProfile);
+          return updatedProfile as Profile;
+        }
       } else {
-        console.log('Designer profile saved to database');
+        // إنشاء ملف جديد للمصمم
+        console.log('Creating new designer profile');
+        const newProfile = {
+          id: user.id,
+          name: designerName || user.user_metadata?.name || 'مصمم',
+          phone: user.user_metadata?.phone || '',
+          role: 'designer',
+          avatar_url: user.user_metadata?.avatar_url || null
+        };
+
+        const { data: createdProfile, error: createError } = await supabase
+          .from('profiles')
+          .insert(newProfile)
+          .select()
+          .single();
+
+        if (createError) {
+          console.error('Error creating designer profile:', createError);
+          throw new Error('فشل في إنشاء ملف المصمم');
+        }
+
+        console.log('Designer profile created:', createdProfile);
+        return createdProfile as Profile;
       }
     } catch (error) {
-      console.warn('Database save failed, continuing with local profile:', error);
+      console.error('Error in createDesignerProfile:', error);
+      throw error;
     }
-
-    return designerProfile;
   }
 
-  // التحقق من صحة UUID
-  static isValidUUID(uuid: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(uuid);
+  // التحقق من صحة المصمم
+  static async verifyDesigner(userId: string): Promise<boolean> {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .eq('role', 'designer')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error verifying designer:', error);
+        return false;
+      }
+
+      return !!data;
+    } catch (error) {
+      console.error('Error in verifyDesigner:', error);
+      return false;
+    }
+  }
+
+  // الحصول على ملف المصمم للمستخدم الحالي
+  static async getCurrentDesignerProfile(): Promise<Profile | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        console.error('No authenticated user');
+        return null;
+      }
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .eq('role', 'designer')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching current designer profile:', error);
+        return null;
+      }
+
+      return data as Profile;
+    } catch (error) {
+      console.error('Error in getCurrentDesignerProfile:', error);
+      return null;
+    }
   }
 }

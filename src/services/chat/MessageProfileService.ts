@@ -11,7 +11,6 @@ export class MessageProfileService {
         .from('profiles')
         .select('id, name, role')
         .eq('id', designerId)
-        .eq('role', 'designer')
         .maybeSingle();
 
       if (fetchError) {
@@ -19,12 +18,17 @@ export class MessageProfileService {
         return false;
       }
 
-      if (existingProfile) {
+      if (!existingProfile) {
+        console.log('Profile not found for user:', designerId);
+        return false;
+      }
+
+      if (existingProfile.role === 'designer') {
         console.log('Designer profile verified:', existingProfile);
         return true;
       }
 
-      console.log('Designer profile not found or not a designer');
+      console.log('User exists but is not a designer. Role:', existingProfile.role);
       return false;
     } catch (error) {
       MessageValidationService.handleError(error, 'Verify Designer Profile');

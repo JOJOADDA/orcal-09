@@ -1,7 +1,7 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { DesignOrder } from '@/types/database';
-import { orderService } from '@/services/orders/orderService';
+import { orderDesignerService } from '@/services/orders/OrderDesignerService';
 import { designerMessageService } from '@/services/chat/DesignerMessageService';
 
 interface DesignerOrderManagerProps {
@@ -28,7 +28,7 @@ const DesignerOrderManager = ({ designerProfile, onOrdersUpdate }: DesignerOrder
       console.log('Order ID:', orderId, 'New status:', status);
       console.log('Designer profile:', designerProfile);
       
-      const result = await orderService.updateOrderStatus(orderId, status);
+      const result = await orderDesignerService.updateOrderStatusByDesigner(orderId, status);
       if (result.error) {
         throw result.error;
       }
