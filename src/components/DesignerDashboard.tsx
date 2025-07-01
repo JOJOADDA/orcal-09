@@ -1,11 +1,11 @@
 
 import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
-import ChatWindow from './chat/ChatWindow';
+import EnhancedChatWindow from './chat/EnhancedChatWindow';
 import { useToast } from '@/hooks/use-toast';
-import { realChatService } from '@/services/chat/realChatService';
 import { orderService } from '@/services/orders/orderService';
 import { realTimeSyncService } from '@/services/realTimeSync';
+import { unifiedChatService } from '@/services/unifiedChatService';
 import { DesignerProfileService } from '@/services/designers/designerProfileService';
 import DesignerHeader from './designer/DesignerHeader';
 import DesignerStats from './designer/DesignerStats';
@@ -21,8 +21,6 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-
-  // إنشاء ملف تعريف موثوق للمصمم
   const [designerProfile, setDesignerProfile] = useState<any>(null);
 
   useEffect(() => {
@@ -69,25 +67,30 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       console.log('Designer received order update:', updatedOrder);
     });
 
-    // الاشتراك في الرسائل الجديدة من العملاء
-    const unsubscribeMessages = realTimeSyncService.subscribeToAllMessages((message) => {
-      // إشعار المصمم بالرسائل الجديدة من العملاء فقط
-      if (message.sender_role === 'client' && message.sender_id !== designerProfile.id) {
-        const orderForMessage = orders.find(order => order.id === message.order_id);
-        if (orderForMessage) {
+    // الاشتراك في الرسائل الجديدة من العملاء باستخدام unifiedChatService
+    const messageSubscriptions: (() => void)[] = [];
+    
+    orders.forEach(order => {
+      const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (message) => {
+        // إشعار المصمم بالرسائل الجديدة من العملاء فقط
+        if (message.sender_role === 'client' && message.sender_id !== designerProfile.id) {
           toast({
             title: "رسالة جديدة من العميل",
-            description: `رسالة في طلب: ${orderForMessage.design_type}`
+            description: `رسالة في طلب: ${order.design_type}`
           });
         }
+      });
+      
+      if (unsubscribe) {
+        messageSubscriptions.push(unsubscribe);
       }
     });
 
     return () => {
       if (unsubscribeOrders) unsubscribeOrders();
-      if (unsubscribeMessages) unsubscribeMessages();
+      messageSubscriptions.forEach(unsub => unsub());
     };
-  }, [designerProfile, orders]);
+  }, [designerProfile, orders.length]);
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -129,13 +132,13 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
         return statusMap[status];
       };
 
-      // إرسال إشعار للعميل من المصمم
+      // إرسال إشعار للعميل من المصمم باستخدام unifiedChatService
       console.log('Sending status update message with designer profile:', designerProfile);
-      const messageResult = await realChatService.sendMessage({
+      const messageResult = await unifiedChatService.sendMessage({
         order_id: orderId,
         sender_id: designerProfile.id,
         sender_name: designerProfile.name,
-        sender_role: 'admin',
+        sender_role: 'designer',
         content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
         message_type: 'system'
       });
@@ -181,7 +184,7 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
       return (
-        <ChatWindow
+        <EnhancedChatWindow
           user={designerProfile}
           order={selectedOrder}
           onClose={() => setSelectedOrderId(null)}

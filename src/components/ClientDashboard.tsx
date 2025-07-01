@@ -2,10 +2,11 @@
 import { useState, useEffect } from 'react';
 import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
-import ChatWindow from './chat/ChatWindow';
+import EnhancedChatWindow from './chat/EnhancedChatWindow';
 import { useToast } from '@/hooks/use-toast';
 import { orderService } from '@/services/orders/orderService';
 import { realTimeSyncService } from '@/services/realTimeSync';
+import { unifiedChatService } from '@/services/unifiedChatService';
 import ClientHeader from './client/ClientHeader';
 import ClientStats from './client/ClientStats';
 import ClientOrdersList from './client/ClientOrdersList';
@@ -60,22 +61,29 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
       }
     });
 
-    // الاشتراك في الرسائل الجديدة
-    const unsubscribeMessages = realTimeSyncService.subscribeToAllMessages((message) => {
-      const userOrder = orders.find(order => order.id === message.order_id);
-      if (userOrder && message.sender_id !== user.id) {
-        toast({
-          title: "رسالة جديدة",
-          description: `رسالة جديدة في طلب: ${userOrder.design_type}`
-        });
+    // الاشتراك في الرسائل الجديدة باستخدام unifiedChatService
+    const messageSubscriptions: (() => void)[] = [];
+    
+    orders.forEach(order => {
+      const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (message) => {
+        if (message.sender_id !== user.id) {
+          toast({
+            title: "رسالة جديدة من المصمم",
+            description: `رسالة في طلب: ${order.design_type}`
+          });
+        }
+      });
+      
+      if (unsubscribe) {
+        messageSubscriptions.push(unsubscribe);
       }
     });
 
     return () => {
       if (unsubscribeOrders) unsubscribeOrders();
-      if (unsubscribeMessages) unsubscribeMessages();
+      messageSubscriptions.forEach(unsub => unsub());
     };
-  }, [user.id, orders]);
+  }, [user.id, orders.length]);
 
   const loadOrders = async () => {
     setIsLoading(true);
@@ -116,7 +124,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
       return (
-        <ChatWindow
+        <EnhancedChatWindow
           user={user}
           order={selectedOrder}
           onClose={() => setSelectedOrderId(null)}

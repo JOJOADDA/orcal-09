@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Profile, ChatMessage, DesignOrder } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
-import { realChatService } from '@/services/chat/realChatService';
+import { unifiedChatService } from '@/services/unifiedChatService';
 import { cn } from '@/lib/utils';
 
 interface EnhancedChatWindowProps {
@@ -36,8 +36,8 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
   useEffect(() => {
     loadMessages();
     
-    const unsubscribe = realChatService.subscribeToMessages(order.id, (newMessage) => {
-      console.log('New message received:', newMessage);
+    const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (newMessage) => {
+      console.log('New message received in EnhancedChatWindow:', newMessage);
       setMessages(prev => {
         const exists = prev.find(msg => msg.id === newMessage.id);
         if (exists) return prev;
@@ -70,9 +70,11 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
   const loadMessages = async () => {
     setIsLoadingMessages(true);
     try {
-      const orderMessages = await realChatService.getMessagesByOrderId(order.id);
+      console.log('Loading messages for order:', order.id, 'User:', user.id);
+      const orderMessages = await unifiedChatService.getMessages(order.id);
       setMessages(orderMessages);
-      await realChatService.markMessagesAsRead(order.id, user.id);
+      await unifiedChatService.markMessagesAsRead(order.id, user.id);
+      console.log('Messages loaded successfully:', orderMessages.length);
     } catch (error) {
       console.error('Error loading messages:', error);
       toast({
@@ -99,7 +101,9 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
     setIsLoading(true);
     
     try {
-      const result = await realChatService.sendMessage({
+      console.log('Sending message from:', user.name, 'Role:', user.role, 'Content:', messageContent.substring(0, 50));
+      
+      const result = await unifiedChatService.sendMessage({
         order_id: order.id,
         sender_id: user.id,
         sender_name: user.name,
@@ -112,6 +116,7 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
         throw new Error(result.error?.message || 'فشل في إرسال الرسالة');
       }
       
+      console.log('Message sent successfully');
     } catch (error) {
       console.error('Error sending message:', error);
       setNewMessage(messageContent); // Restore message on error
