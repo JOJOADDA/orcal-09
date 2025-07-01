@@ -53,7 +53,7 @@ const FastIndex = () => {
     return (
       <div className="relative">
         <Suspense fallback={<LoadingScreen />}>
-          <FastAuthPage onAuthSuccess={() => window.location.reload()} />
+          <FastAuthPage onAuthSuccess={() => {}} />
         </Suspense>
         <DesignerLoginButton onShowDesignerAuth={() => setShowDesignerAuth(true)} />
       </div>

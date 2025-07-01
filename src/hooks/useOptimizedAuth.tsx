@@ -9,38 +9,42 @@ export const useOptimizedAuth = () => {
   const [isInitializing, setIsInitializing] = useState(true);
 
   // تحسين معالج تغيير حالة المصادقة
-  const handleAuthStateChange = useCallback(async (event: string, session: any) => {
+  const handleAuthStateChange = useCallback((event: string, session: any) => {
     if (session?.user) {
-      try {
-        // جلب بيانات المستخدم من قاعدة البيانات
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .maybeSingle();
-        
-        if (profileData && !error) {
-          setCurrentUser(profileData);
-          setIsAuthenticated(true);
-        } else {
-          // إذا لم توجد بيانات في قاعدة البيانات، نستخدم البيانات الأساسية
-          const fallbackProfile: Profile = {
-            id: session.user.id,
-            name: session.user.email?.split('@')[0] || 'مستخدم',
-            phone: '',
-            role: 'client',
-            avatar_url: null,
-            created_at: session.user.created_at,
-            updated_at: session.user.created_at
-          };
-          setCurrentUser(fallbackProfile);
-          setIsAuthenticated(true);
+      // جلب بيانات المستخدم من قاعدة البيانات بشكل غير متزامن
+      const fetchUserProfile = async () => {
+        try {
+          const { data: profileData, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .maybeSingle();
+          
+          if (profileData && !error) {
+            setCurrentUser(profileData);
+            setIsAuthenticated(true);
+          } else {
+            // إذا لم توجد بيانات في قاعدة البيانات، نستخدم البيانات الأساسية
+            const fallbackProfile: Profile = {
+              id: session.user.id,
+              name: session.user.email?.split('@')[0] || 'مستخدم',
+              phone: '',
+              role: 'client',
+              avatar_url: null,
+              created_at: session.user.created_at,
+              updated_at: session.user.created_at
+            };
+            setCurrentUser(fallbackProfile);
+            setIsAuthenticated(true);
+          }
+        } catch (error) {
+          console.error('Error fetching user profile:', error);
+          setCurrentUser(null);
+          setIsAuthenticated(false);
         }
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-        setCurrentUser(null);
-        setIsAuthenticated(false);
-      }
+      };
+      
+      fetchUserProfile();
     } else {
       setCurrentUser(null);
       setIsAuthenticated(false);
