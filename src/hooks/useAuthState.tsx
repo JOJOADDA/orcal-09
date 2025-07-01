@@ -72,10 +72,10 @@ export const useAuthState = () => {
         
         const sessionPromise = supabaseService.getCurrentSession();
         
-        const session = await Promise.race([sessionPromise, timeoutPromise]) as any;
+        const sessionResult = await Promise.race([sessionPromise, timeoutPromise]) as any;
         
-        if (isSubscribed && session?.user) {
-          const profile = await supabaseService.getProfile(session.user.id);
+        if (isSubscribed && sessionResult?.session?.user) {
+          const profile = await supabaseService.getProfile(sessionResult.session.user.id);
           if (profile) {
             setCurrentUser(profile);
             setIsAuthenticated(true);
@@ -103,9 +103,9 @@ export const useAuthState = () => {
   // Optimized auth success handler
   const handleAuthSuccess = useCallback(async () => {
     try {
-      const session = await supabaseService.getCurrentSession();
-      if (session?.user) {
-        const profile = await supabaseService.getProfile(session.user.id);
+      const sessionResult = await supabaseService.getCurrentSession();
+      if (sessionResult?.session?.user) {
+        const profile = await supabaseService.getProfile(sessionResult.session.user.id);
         if (profile) {
           setCurrentUser(profile);
           setIsAuthenticated(true);
