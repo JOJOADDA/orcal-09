@@ -22,12 +22,19 @@ export class ChatRoomService {
       if (existingRoom) {
         console.log('Found existing chat room:', existingRoom.id);
         
-        // تحديث admin_id إذا كان المستخدم مصمم ولم يكن محدد
-        if (userRole === 'designer' && !existingRoom.admin_id) {
-          console.log('Updating chat room admin_id for designer');
-          const updatedRoom = await this.dataService.updateRoomAdmin(existingRoom.id, userId);
-          return updatedRoom || existingRoom;
-        }
+      // تحديث admin_id إذا كان المستخدم مصمم ولم يكن محدد
+      if (userRole === 'designer' && !existingRoom.admin_id) {
+        console.log('Updating chat room admin_id for designer:', userId);
+        const updatedRoom = await this.dataService.updateRoomAdmin(existingRoom.id, userId);
+        return updatedRoom || existingRoom;
+      }
+      
+      // أيضاً تحديث admin_id للمصممين حتى لو كان موجود (للتأكد من الصحة)
+      if (userRole === 'designer' && existingRoom.admin_id !== userId) {
+        console.log('Ensuring correct admin_id for designer:', userId);
+        const updatedRoom = await this.dataService.updateRoomAdmin(existingRoom.id, userId);
+        return updatedRoom || existingRoom;
+      }
         
         return existingRoom;
       }

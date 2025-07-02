@@ -51,8 +51,9 @@ export class MessageDataService {
     message_type: 'text' | 'file' | 'system';
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
     try {
-      const dbSenderRole = messageData.sender_role === 'designer' ? 'admin' : messageData.sender_role;
-      console.log('Database sender role:', dbSenderRole);
+      // حفظ دور المرسل الأصلي (لا نغيره)
+      const dbSenderRole = messageData.sender_role;
+      console.log('Database sender role (original):', dbSenderRole);
 
       const { data, error } = await supabase
         .from('chat_messages')
