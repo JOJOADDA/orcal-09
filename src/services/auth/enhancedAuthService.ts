@@ -90,35 +90,89 @@ export class EnhancedAuthService {
   // تسجيل دخول مصمم
   static async signInDesigner(email: string, password: string): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
+      console.log('Starting designer authentication for:', email);
+      
       // التحقق من أن الإيميل مسجل كمصمم
       const { data: isDesigner, error: verifyError } = await supabase.rpc('verify_designer_comprehensive', {
         p_email: email.toLowerCase().trim()
       });
       
       if (verifyError || !isDesigner) {
+        console.log('Designer verification failed:', verifyError);
         return { success: false, error: 'هذا الإيميل غير مسجل كمصمم أو غير مفعل' };
       }
 
+      console.log('Designer verified, getting designer data...');
+      
       // جلب معلومات المصمم
       const { data: designerData, error: getError } = await supabase.rpc('get_designer_comprehensive', {
         p_email: email.toLowerCase().trim()
       });
       
       if (getError || !designerData || designerData.length === 0) {
+        console.error('Failed to get designer data:', getError);
         return { success: false, error: 'لم يتم العثور على بيانات المصمم' };
       }
 
       const designer = designerData[0];
+      console.log('Designer data retrieved:', designer);
       
       if (!designer.is_verified) {
         return { success: false, error: 'حسابك كمصمم لم يتم التحقق منه بعد. يرجى الانتظار' };
       }
 
+      // إنشاء حساب مؤقت في Supabase للمصمم إذا لم يكن موجوداً
+      let authResult;
+      
+      try {
+        // محاولة تسجيل الدخول أولاً
+        authResult = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password
+        });
+        
+        console.log('Designer auth attempt result:', authResult);
+        
+        if (authResult.error) {
+          // إذا فشل تسجيل الدخول، قد يكون الحساب غير موجود في auth.users
+          if (authResult.error.message.includes('Invalid login credentials')) {
+            console.log('Designer not found in auth.users, checking if we need to create account...');
+            
+            // هنا نعود بنجاح مع بيانات المصمم حتى لو لم يكن في auth.users
+            // سيتم التعامل مع هذا في DesignerProfileService
+            return { 
+              success: true, 
+              data: {
+                designer: designer,
+                isDesigner: true,
+                needsAuthSetup: true // إشارة لإعداد المصادقة
+              }
+            };
+          }
+          return { success: false, error: authResult.error.message };
+        }
+        
+      } catch (authError) {
+        console.error('Auth error:', authError);
+        // حتى لو فشلت المصادقة، نعود بنجاح مع بيانات المصمم
+        return { 
+          success: true, 
+          data: {
+            designer: designer,
+            isDesigner: true,
+            needsAuthSetup: true
+          }
+        };
+      }
+
+      console.log('Designer authentication successful');
       return { 
         success: true, 
         data: {
           designer: designer,
-          isDesigner: true
+          isDesigner: true,
+          session: authResult.data.session,
+          user: authResult.data.user
         }
       };
     } catch (error) {

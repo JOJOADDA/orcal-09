@@ -22,21 +22,33 @@ const DesignerProfileInit = ({ designerName, onProfileInitialized }: DesignerPro
           throw new Error('اسم المصمم مطلوب');
         }
         
+        console.log('Calling DesignerProfileService.createDesignerProfile...');
         const profile = await DesignerProfileService.createDesignerProfile(designerName);
         
         if (!profile) {
-          throw new Error('فشل في إنشاء أو جلب ملف المصمم');
+          throw new Error('فشل في إنشاء أو جلب ملف المصمم - لم يتم إرجاع أي بيانات');
         }
         
-        console.log('Designer profile created/retrieved:', profile);
+        console.log('Designer profile created/retrieved successfully:', profile);
+        console.log('Profile ID:', profile.id);
+        console.log('Profile Role:', profile.role);
+        
         onProfileInitialized(profile);
-        console.log('Designer profile initialized successfully');
+        console.log('Designer profile initialized successfully - calling onProfileInitialized');
+        setIsInitializing(false); // تم بنجاح
       } catch (error) {
         console.error('Error initializing designer profile:', error);
         
-        const errorMessage = error instanceof Error 
-          ? error.message 
-          : 'فشل في تهيئة ملف المصمم';
+        let errorMessage = 'فشل في تهيئة ملف المصمم';
+        
+        if (error instanceof Error) {
+          errorMessage = error.message;
+          console.log('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name
+          });
+        }
           
         toast({
           title: "خطأ في تحميل ملف المصمم",
@@ -44,19 +56,15 @@ const DesignerProfileInit = ({ designerName, onProfileInitialized }: DesignerPro
           variant: "destructive"
         });
         
-        // إعادة المحاولة بعد ثانيتين
-        setTimeout(() => {
-          if (isInitializing) {
-            console.log('Retrying profile initialization...');
-            initializeDesignerProfile();
-          }
-        }, 2000);
-      } finally {
+        console.log('Setting isInitializing to false due to error');
         setIsInitializing(false);
       }
     };
 
-    initializeDesignerProfile();
+    // تشغيل التهيئة فقط إذا كان isInitializing true
+    if (isInitializing) {
+      initializeDesignerProfile();
+    }
   }, [designerName, onProfileInitialized, toast, isInitializing]);
 
   if (isInitializing) {

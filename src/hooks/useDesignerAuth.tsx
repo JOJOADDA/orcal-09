@@ -8,7 +8,14 @@ export const useDesignerAuth = () => {
   const [showDesignerAuth, setShowDesignerAuth] = useState(false);
 
   // Designer authentication handlers
-  const handleDesignerLogin = useCallback(async (designerData: { name: string; role: string; email?: string; id?: string }) => {
+  const handleDesignerLogin = useCallback(async (designerData: { 
+    name: string; 
+    role: string; 
+    email?: string; 
+    id?: string;
+    specialization?: string;
+    needsAuthSetup?: boolean;
+  }) => {
     console.log('Designer login handler called with:', designerData);
     
     setDesignerUser(designerData);

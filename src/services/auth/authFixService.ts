@@ -12,7 +12,7 @@ export class AuthFixService {
         return { success: false, error: error.message };
       }
 
-      const unconfirmedUsers = users?.users.filter(user => !user.email_confirmed_at) || [];
+      const unconfirmedUsers = users?.users.filter((user: any) => !user.email_confirmed_at) || [];
       
       console.log(`Found ${unconfirmedUsers.length} unconfirmed users`);
       

@@ -1,87 +1,19 @@
 import { supabase } from '@/integrations/supabase/client';
 import { Profile } from '@/types/database';
+import { DesignerAuthService } from './designerAuthService';
 
 export class DesignerProfileService {
   // إنشاء أو جلب ملف تعريف المصمم للمستخدم المصادق عليه
   static async createDesignerProfile(designerName?: string): Promise<Profile | null> {
     try {
-      console.log('Creating/fetching designer profile');
+      console.log('Creating/fetching designer profile for:', designerName);
       
-      // الحصول على المستخدم المصادق عليه الحالي
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        console.error('No authenticated user found:', authError);
-        throw new Error('يجب تسجيل الدخول أولاً');
+      if (!designerName || designerName.trim() === '') {
+        throw new Error('اسم المصمم مطلوب');
       }
 
-      console.log('Authenticated user:', user.id);
-
-      // البحث عن ملف المصمم الموجود
-      const { data: existingProfile, error: fetchError } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error fetching existing profile:', fetchError);
-        throw new Error('خطأ في جلب ملف المصمم');
-      }
-
-      if (existingProfile) {
-        console.log('Found existing profile:', existingProfile);
-        
-        // التأكد من أن المستخدم مصمم
-        if (existingProfile.role === 'designer') {
-          return existingProfile as Profile;
-        } else {
-          // تحديث دور المستخدم ليصبح مصمم
-          console.log('Updating user role to designer');
-          const { data: updatedProfile, error: updateError } = await supabase
-            .from('profiles')
-            .update({ 
-              role: 'designer',
-              name: designerName || existingProfile.name || 'مصمم',
-              updated_at: new Date().toISOString() 
-            })
-            .eq('id', user.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('Error updating profile to designer:', updateError);
-            throw new Error('فشل في تحديث ملف المصمم');
-          }
-
-          console.log('Profile updated to designer:', updatedProfile);
-          return updatedProfile as Profile;
-        }
-      } else {
-        // إنشاء ملف جديد للمصمم
-        console.log('Creating new designer profile');
-        const newProfile = {
-          id: user.id,
-          name: designerName || user.user_metadata?.name || 'مصمم',
-          phone: user.user_metadata?.phone || '',
-          role: 'designer',
-          avatar_url: user.user_metadata?.avatar_url || null
-        };
-
-        const { data: createdProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert(newProfile)
-          .select()
-          .single();
-
-        if (createError) {
-          console.error('Error creating designer profile:', createError);
-          throw new Error('فشل في إنشاء ملف المصمم');
-        }
-
-        console.log('Designer profile created:', createdProfile);
-        return createdProfile as Profile;
-      }
+      // استخدام خدمة المصادقة المحسّنة للمصممين
+      return await DesignerAuthService.getOrCreateDesignerProfile(designerName);
     } catch (error) {
       console.error('Error in createDesignerProfile:', error);
       throw error;

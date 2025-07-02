@@ -14,7 +14,14 @@ import { EnhancedAuthService } from '@/services/auth/enhancedAuthService';
 
 interface DesignerAuthDialogProps {
   onClose: () => void;
-  onDesignerLogin: (designerData: { id?: string; name: string; role: string; email: string }) => void;
+  onDesignerLogin: (designerData: { 
+    id?: string; 
+    name: string; 
+    role: string; 
+    email: string;
+    specialization?: string;
+    needsAuthSetup?: boolean;
+  }) => void;
 }
 
 const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProps) => {
@@ -100,11 +107,14 @@ const DesignerAuthDialog = ({ onClose, onDesignerLogin }: DesignerAuthDialogProp
           description: `مرحباً ${result.data.designer.name}، يمكنك الآن إدارة المشاريع`
         });
         
+        // تمرير بيانات المصمم مع معلومات إضافية
         onDesignerLogin({
-          id: result.data.designer.id,
+          id: result.data.designer.user_id || result.data.designer.id,
           name: result.data.designer.name,
-          email: result.data.designer.email,
-          role: 'designer'
+          email: result.data.designer.email || loginData.email,
+          role: 'designer',
+          specialization: result.data.designer.specialization,
+          needsAuthSetup: result.data.needsAuthSetup
         });
         onClose();
       } else {
