@@ -93,9 +93,12 @@ export const useOptimizedAuth = () => {
   // تسجيل دخول محسن
   const signIn = useCallback(async (email: string, password: string) => {
     try {
+      console.log('Attempting sign in for:', email);
       const result = await EnhancedAuthService.signInClient(email, password);
+      console.log('Sign in result:', result);
       return result;
     } catch (error: any) {
+      console.error('Sign in error:', error);
       return { success: false, error: error.message || 'فشل تسجيل الدخول' };
     }
   }, []);

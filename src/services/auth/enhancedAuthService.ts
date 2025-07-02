@@ -1,5 +1,6 @@
 import { supabase } from '@/integrations/supabase/client';
 import { EmailValidationService } from './emailValidationService';
+import { AuthFixService } from './authFixService';
 
 export class EnhancedAuthService {
   // تسجيل عميل جديد مع التحقق من الإيميل
@@ -32,7 +33,9 @@ export class EnhancedAuthService {
             phone: userData.phone || '',
             role: 'client'
           },
-          emailRedirectTo: `${window.location.origin}/`
+          emailRedirectTo: `${window.location.origin}/`,
+          // إيقاف تأكيد البريد الإلكتروني مؤقتاً
+          // يمكن تفعيله لاحقاً من إعدادات Supabase
         }
       });
 
@@ -53,27 +56,31 @@ export class EnhancedAuthService {
   // تسجيل دخول عميل
   static async signInClient(email: string, password: string): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
-      // التحقق من أن الإيميل مسجل كعميل
-      const emailCheck = await EmailValidationService.checkEmailExists(email);
+      console.log('Attempting client sign in for:', email);
       
-      if (!emailCheck.exists) {
-        return { success: false, error: 'هذا الإيميل غير مسجل في النظام' };
+      // محاولة تسجيل الدخول مع إصلاح تلقائي لمشكلة تأكيد البريد
+      const fixResult = await AuthFixService.signInWithoutEmailConfirmation(email, password);
+      
+      if (!fixResult.success) {
+        // إذا فشل، تحقق من سبب الفشل
+        if (fixResult.error?.includes('Invalid login credentials')) {
+          return { success: false, error: 'بيانات تسجيل الدخول غير صحيحة' };
+        }
+        return { success: false, error: fixResult.error || 'فشل تسجيل الدخول' };
       }
 
-      if (!emailCheck.is_client) {
-        return { success: false, error: 'هذا الإيميل مسجل كمصمم، يرجى استخدام تسجيل دخول المصممين' };
+      // التحقق من أن المستخدم عميل وليس مصمم
+      if (fixResult.data?.user) {
+        const emailCheck = await EmailValidationService.checkEmailExists(email);
+        if (emailCheck.is_designer && !emailCheck.is_client) {
+          // تسجيل خروج المستخدم إذا كان مصمم يحاول تسجيل دخول كعميل
+          await supabase.auth.signOut();
+          return { success: false, error: 'هذا الإيميل مسجل كمصمم، يرجى استخدام تسجيل دخول المصممين' };
+        }
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (error) {
-        return { success: false, error: 'فشل تسجيل الدخول. تحقق من البيانات المدخلة' };
-      }
-
-      return { success: true, data };
+      console.log('Client sign in successful');
+      return { success: true, data: fixResult.data };
     } catch (error) {
       console.error('Client signin error:', error);
       return { success: false, error: 'فشل في تسجيل الدخول' };
@@ -84,27 +91,33 @@ export class EnhancedAuthService {
   static async signInDesigner(email: string, password: string): Promise<{ success: boolean; error?: string; data?: any }> {
     try {
       // التحقق من أن الإيميل مسجل كمصمم
-      const isDesigner = await EmailValidationService.verifyDesigner(email);
+      const { data: isDesigner, error: verifyError } = await supabase.rpc('verify_designer_comprehensive', {
+        p_email: email.toLowerCase().trim()
+      });
       
-      if (!isDesigner) {
+      if (verifyError || !isDesigner) {
         return { success: false, error: 'هذا الإيميل غير مسجل كمصمم أو غير مفعل' };
       }
 
       // جلب معلومات المصمم
-      const designerData = await EmailValidationService.getDesignerByEmail(email);
+      const { data: designerData, error: getError } = await supabase.rpc('get_designer_comprehensive', {
+        p_email: email.toLowerCase().trim()
+      });
       
-      if (!designerData) {
+      if (getError || !designerData || designerData.length === 0) {
         return { success: false, error: 'لم يتم العثور على بيانات المصمم' };
       }
 
-      if (!designerData.is_verified) {
+      const designer = designerData[0];
+      
+      if (!designer.is_verified) {
         return { success: false, error: 'حسابك كمصمم لم يتم التحقق منه بعد. يرجى الانتظار' };
       }
 
       return { 
         success: true, 
         data: {
-          designer: designerData,
+          designer: designer,
           isDesigner: true
         }
       };

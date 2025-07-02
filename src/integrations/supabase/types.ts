@@ -413,6 +413,21 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_designer_comprehensive: {
+        Args: { p_email: string }
+        Returns: {
+          id: string
+          user_id: string
+          name: string
+          email: string
+          phone: string
+          specialization: string
+          experience_years: number
+          portfolio_url: string
+          is_verified: boolean
+          is_active: boolean
+        }[]
+      }
       is_designer: {
         Args: { user_id?: string }
         Returns: boolean
@@ -430,6 +445,10 @@ export type Database = {
         Returns: undefined
       }
       verify_designer: {
+        Args: { p_email: string }
+        Returns: boolean
+      }
+      verify_designer_comprehensive: {
         Args: { p_email: string }
         Returns: boolean
       }

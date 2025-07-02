@@ -5,10 +5,11 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { User, Lock, Eye, EyeOff, Mail } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Mail, Settings } from 'lucide-react';
 import { useOptimizedAuth } from '@/hooks/useOptimizedAuth';
 import { EnhancedAuthService } from '@/services/auth/enhancedAuthService';
 import { useToast } from '@/hooks/use-toast';
+import SystemStatus from '@/components/SystemStatus';
 
 interface FastAuthPageProps {
   onAuthSuccess: () => void;
@@ -17,6 +18,7 @@ interface FastAuthPageProps {
 const FastAuthPage = ({ onAuthSuccess }: FastAuthPageProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showSystemStatus, setShowSystemStatus] = useState(false);
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ 
     name: '', 
@@ -110,6 +112,14 @@ const FastAuthPage = ({ onAuthSuccess }: FastAuthPageProps) => {
     }
   }, [signupData, signupValidation.isValid, toast, onAuthSuccess]);
 
+  if (showSystemStatus) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
+        <SystemStatus onClose={() => setShowSystemStatus(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-purple-50 flex items-center justify-center px-4">
       <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm shadow-2xl">
@@ -125,6 +135,14 @@ const FastAuthPage = ({ onAuthSuccess }: FastAuthPageProps) => {
               <CardTitle className="text-2xl font-bold text-gray-900 mb-2">أوركال للدعاية والإعلان</CardTitle>
               <p className="text-gray-600 text-sm">منصة التصميم الاحترافية</p>
             </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSystemStatus(true)}
+              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+            >
+              <Settings className="w-4 h-4" />
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
