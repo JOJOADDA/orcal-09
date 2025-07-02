@@ -41,8 +41,8 @@ export class UnifiedChatService {
 
     // استخدام خدمة المصمم المحسنة للمصممين
     if (messageData.sender_role === 'designer') {
-      console.log('Using designer message service');
-      return designerMessageService.sendDesignerMessage({
+      console.log('Using designer message service for designer message');
+      const result = await designerMessageService.sendDesignerMessage({
         order_id: messageData.order_id,
         sender_id: messageData.sender_id,
         sender_name: messageData.sender_name,
@@ -50,6 +50,15 @@ export class UnifiedChatService {
         message_type: messageData.message_type,
         files: messageData.files
       });
+      
+      // إضافة تسجيل للتأكد من إرسال الرسالة
+      if (result.success) {
+        console.log('Designer message sent successfully via unified service');
+      } else {
+        console.error('Failed to send designer message:', result.error);
+      }
+      
+      return result;
     }
 
     // استخدام الخدمة العادية للعملاء والإداريين
