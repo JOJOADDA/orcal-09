@@ -147,7 +147,7 @@ export class DesignerMessageService {
           order_id: messageData.order_id,
           sender_id: messageData.sender_id,
           sender_name: messageData.sender_name,
-          sender_role: 'admin', // استخدام admin بدلاً من designer للتوافق مع قاعدة البيانات
+          sender_role: 'designer', // استخدام designer للحفاظ على الدور الصحيح
           content: messageData.content.trim(),
           message_type: messageData.message_type || 'text',
           is_read: false
