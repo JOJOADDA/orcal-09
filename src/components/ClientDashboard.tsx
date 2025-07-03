@@ -4,6 +4,7 @@ import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import EnhancedChatWindow from './chat/EnhancedChatWindow';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/components/notifications/NotificationProvider';
 import { orderService } from '@/services/orders/orderService';
 import { realTimeSyncService } from '@/services/realTimeSync';
 import { unifiedChatService } from '@/services/unifiedChatService';
@@ -22,6 +23,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
+  const { showNotification } = useNotifications();
 
   useEffect(() => {
     loadOrders();
@@ -67,6 +69,12 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
     orders.forEach(order => {
       const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (message) => {
         if (message.sender_id !== user.id) {
+          // WhatsApp-style notification
+          showNotification(message, () => {
+            setSelectedOrderId(order.id);
+          });
+          
+          // Keep toast as backup
           toast({
             title: "رسالة جديدة من المصمم",
             description: `رسالة في طلب: ${order.design_type}`

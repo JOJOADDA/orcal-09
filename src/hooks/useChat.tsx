@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { ChatMessage, Profile, DesignOrder } from '@/types/database';
 import { unifiedChatService } from '@/services/unifiedChatService';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/components/notifications/NotificationProvider';
 
 interface UseChatProps {
   user: Profile;
@@ -17,6 +18,7 @@ export const useChat = ({ user, order }: UseChatProps) => {
   const [onlineStatus, setOnlineStatus] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { showNotification } = useNotifications();
 
   // Load messages
   const loadMessages = useCallback(async () => {
@@ -93,8 +95,14 @@ export const useChat = ({ user, order }: UseChatProps) => {
         return [...prev, newMessage];
       });
       
-      // Show notification if message is from other user
+      // Show WhatsApp-style notification if message is from other user
       if (newMessage.sender_id !== user.id) {
+        showNotification(newMessage, () => {
+          // يمكن إضافة منطق لفتح الدردشة هنا إذا لزم الأمر
+          console.log('Opening chat from notification');
+        });
+        
+        // Keep toast as backup
         toast({
           title: "رسالة جديدة",
           description: `${newMessage.sender_name}: ${newMessage.content.substring(0, 50)}...`,

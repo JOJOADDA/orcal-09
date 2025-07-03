@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Profile, ChatMessage, DesignOrder } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/components/notifications/NotificationProvider';
 import { unifiedChatService } from '@/services/unifiedChatService';
 import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
@@ -22,6 +23,7 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
   const [onlineStatus, setOnlineStatus] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { showNotification } = useNotifications();
 
   useEffect(() => {
     console.log('=== EnhancedChatWindow initialized ===');
@@ -43,8 +45,16 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
         return [...prev, newMessage];
       });
       
-      // Show notification if message is from other user
+      // Show WhatsApp-style notification if message is from other user
       if (newMessage.sender_id !== user.id) {
+        showNotification(newMessage, () => {
+          // الدردشة مفتوحة بالفعل، فقط التمرير للأسفل
+          setTimeout(() => {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+          }, 100);
+        });
+        
+        // Keep toast as backup
         toast({
           title: "رسالة جديدة",
           description: `${newMessage.sender_name}: ${newMessage.content.substring(0, 50)}...`,

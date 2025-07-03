@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
+import { useNotifications } from '@/components/notifications/NotificationProvider';
 import { realTimeSyncService } from '@/services/realTimeSync';
 import { unifiedChatService } from '@/services/unifiedChatService';
 
@@ -13,6 +14,7 @@ interface DesignerSubscriptionsProps {
 
 const DesignerSubscriptions = ({ designerProfile, orders, onOrderUpdate }: DesignerSubscriptionsProps) => {
   const { toast } = useToast();
+  const { showNotification } = useNotifications();
 
   useEffect(() => {
     if (!designerProfile) return;
@@ -34,6 +36,13 @@ const DesignerSubscriptions = ({ designerProfile, orders, onOrderUpdate }: Desig
         console.log('Designer received new message:', message);
         // إشعار المصمم بالرسائل الجديدة من العملاء فقط
         if (message.sender_role === 'client' && message.sender_id !== designerProfile.id) {
+          // WhatsApp-style notification
+          showNotification(message, () => {
+            // يمكن إضافة منطق لفتح الدردشة هنا
+            console.log('Opening chat for order:', order.id);
+          });
+          
+          // Keep toast as backup
           toast({
             title: "رسالة جديدة من العميل",
             description: `رسالة في طلب: ${order.design_type}`,

@@ -37,6 +37,11 @@
 
     --radius: 0.5rem;
 
+    /* WhatsApp notification colors */
+    --whatsapp-green: 142 70% 49%;
+    --whatsapp-green-light: 142 70% 95%;
+    --notification-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.12);
+
     --sidebar-background: 0 0% 98%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
