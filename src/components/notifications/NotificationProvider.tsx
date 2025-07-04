@@ -1,11 +1,14 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { ChatMessage } from '@/types/database';
+import { pushNotificationService } from '@/services/notifications/pushNotificationService';
 import WhatsAppNotification from './WhatsAppNotification';
+import NotificationPermissionPrompt from './NotificationPermissionPrompt';
 
 interface NotificationContextType {
-  showNotification: (message: ChatMessage, onOpenChat: () => void) => void;
+  showNotification: (message: ChatMessage, onOpenChat: () => void, orderId?: string) => void;
   hideNotification: (messageId: string) => void;
   playNotificationSound: () => void;
+  requestNotificationPermission: () => Promise<boolean>;
 }
 
 const NotificationContext = createContext<NotificationContextType | null>(null);
@@ -22,6 +25,34 @@ interface NotificationProviderProps {
 
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({ children }) => {
   const [notifications, setNotifications] = useState<ActiveNotification[]>([]);
+  const [hasNotificationPermission, setHasNotificationPermission] = useState(false);
+  const [showPermissionPrompt, setShowPermissionPrompt] = useState(false);
+  const [hasCheckedPermission, setHasCheckedPermission] = useState(false);
+
+  useEffect(() => {
+    // التحقق من إذن الإشعارات عند تحميل المكون
+    checkNotificationPermission();
+  }, []);
+
+  const checkNotificationPermission = async () => {
+    const hasPermission = await pushNotificationService.isPermissionGranted();
+    setHasNotificationPermission(hasPermission);
+    setHasCheckedPermission(true);
+    
+    // إظهار مربع طلب الإذن إذا لم يكن ممنوحاً ولم يتم رفضه من قبل
+    if (!hasPermission && Notification.permission === 'default') {
+      // انتظار قليل قبل إظهار الطلب لتحسين تجربة المستخدم
+      setTimeout(() => {
+        setShowPermissionPrompt(true);
+      }, 3000);
+    }
+  };
+
+  const requestNotificationPermission = useCallback(async (): Promise<boolean> => {
+    const granted = await pushNotificationService.checkAndRequestPermission();
+    setHasNotificationPermission(granted);
+    return granted;
+  }, []);
 
   const playNotificationSound = useCallback(() => {
     try {
@@ -47,7 +78,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     }
   }, []);
 
-  const showNotification = useCallback((message: ChatMessage, onOpenChat: () => void) => {
+  const showNotification = useCallback(async (message: ChatMessage, onOpenChat: () => void, orderId?: string) => {
     // إضافة الإشعار الجديد
     const newNotification: ActiveNotification = {
       id: message.id,
@@ -61,14 +92,23 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       return [...filtered, newNotification];
     });
 
+    // إرسال إشعار نظام التشغيل إذا كان الإذن ممنوح
+    if (hasNotificationPermission && orderId) {
+      try {
+        await pushNotificationService.showNotification(message, orderId);
+      } catch (error) {
+        console.error('Error showing system notification:', error);
+      }
+    }
+
     // تشغيل صوت الإشعار
     playNotificationSound();
 
-    // إخفاء الإشعار تلقائياً بعد 8 ثوان
+    // إخفاء الإشعار الداخلي تلقائياً بعد 8 ثوان
     setTimeout(() => {
       hideNotification(message.id);
     }, 8000);
-  }, [playNotificationSound]);
+  }, [playNotificationSound, hasNotificationPermission]);
 
   const hideNotification = useCallback((messageId: string) => {
     setNotifications(prev => prev.filter(n => n.id !== messageId));
@@ -78,7 +118,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     <NotificationContext.Provider value={{
       showNotification,
       hideNotification,
-      playNotificationSound
+      playNotificationSound,
+      requestNotificationPermission
     }}>
       {children}
       
@@ -93,6 +134,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
           />
         ))}
       </div>
+
+      {/* مربع طلب إذن الإشعارات */}
+      {showPermissionPrompt && (
+        <NotificationPermissionPrompt
+          onClose={() => setShowPermissionPrompt(false)}
+        />
+      )}
     </NotificationContext.Provider>
   );
 };

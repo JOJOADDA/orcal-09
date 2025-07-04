@@ -72,7 +72,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
           // WhatsApp-style notification
           showNotification(message, () => {
             setSelectedOrderId(order.id);
-          });
+          }, order.id);
           
           // Keep toast as backup
           toast({

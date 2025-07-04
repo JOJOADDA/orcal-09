@@ -100,7 +100,7 @@ export const useChat = ({ user, order }: UseChatProps) => {
         showNotification(newMessage, () => {
           // يمكن إضافة منطق لفتح الدردشة هنا إذا لزم الأمر
           console.log('Opening chat from notification');
-        });
+        }, order.id);
         
         // Keep toast as backup
         toast({

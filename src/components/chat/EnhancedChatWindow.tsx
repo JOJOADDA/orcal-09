@@ -52,7 +52,7 @@ const EnhancedChatWindow = ({ user, order, onClose }: EnhancedChatWindowProps) =
           setTimeout(() => {
             messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
           }, 100);
-        });
+        }, order.id);
         
         // Keep toast as backup
         toast({

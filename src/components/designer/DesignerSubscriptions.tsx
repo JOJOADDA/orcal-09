@@ -40,7 +40,7 @@ const DesignerSubscriptions = ({ designerProfile, orders, onOrderUpdate }: Desig
           showNotification(message, () => {
             // يمكن إضافة منطق لفتح الدردشة هنا
             console.log('Opening chat for order:', order.id);
-          });
+          }, order.id);
           
           // Keep toast as backup
           toast({
