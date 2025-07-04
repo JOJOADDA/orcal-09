@@ -1,13 +1,11 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
 import EnhancedChatWindow from './chat/EnhancedChatWindow';
+import OptimizedSubscriptions from './OptimizedSubscriptions';
 import { useToast } from '@/hooks/use-toast';
-import { useNotifications } from '@/components/notifications/NotificationProvider';
 import { orderService } from '@/services/orders/orderService';
-import { realTimeSyncService } from '@/services/realTimeSync';
-import { unifiedChatService } from '@/services/unifiedChatService';
 import ClientHeader from './client/ClientHeader';
 import ClientStats from './client/ClientStats';
 import ClientOrdersList from './client/ClientOrdersList';
@@ -23,77 +21,9 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
-  const { showNotification } = useNotifications();
 
-  useEffect(() => {
-    loadOrders();
-    
-    // الاشتراك في التحديثات الفورية للطلبات
-    const unsubscribeOrders = realTimeSyncService.subscribeToOrderUpdates((updatedOrder) => {
-      // تحديث الطلب إذا كان للعميل الحالي
-      if (updatedOrder.client_id === user.id) {
-        setOrders(prev => {
-          const existingIndex = prev.findIndex(order => order.id === updatedOrder.id);
-          if (existingIndex >= 0) {
-            const newOrders = [...prev];
-            newOrders[existingIndex] = updatedOrder;
-            return newOrders;
-          } else {
-            return [updatedOrder, ...prev];
-          }
-        });
-
-        // إشعار العميل بالتحديث
-        if (updatedOrder.status === 'in-progress') {
-          toast({
-            title: "تحديث الطلب",
-            description: "بدأ المصمم في تنفيذ طلبك"
-          });
-        } else if (updatedOrder.status === 'completed') {
-          toast({
-            title: "تحديث الطلب",
-            description: "تم إكمال تصميمك"
-          });
-        } else if (updatedOrder.status === 'delivered') {
-          toast({
-            title: "تحديث الطلب",
-            description: "تم تسليم التصميم"
-          });
-        }
-      }
-    });
-
-    // الاشتراك في الرسائل الجديدة باستخدام unifiedChatService
-    const messageSubscriptions: (() => void)[] = [];
-    
-    orders.forEach(order => {
-      const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (message) => {
-        if (message.sender_id !== user.id) {
-          // WhatsApp-style notification
-          showNotification(message, () => {
-            setSelectedOrderId(order.id);
-          }, order.id);
-          
-          // Keep toast as backup
-          toast({
-            title: "رسالة جديدة من المصمم",
-            description: `رسالة في طلب: ${order.design_type}`
-          });
-        }
-      });
-      
-      if (unsubscribe) {
-        messageSubscriptions.push(unsubscribe);
-      }
-    });
-
-    return () => {
-      if (unsubscribeOrders) unsubscribeOrders();
-      messageSubscriptions.forEach(unsub => unsub());
-    };
-  }, [user.id, orders.length]);
-
-  const loadOrders = async () => {
+  // تحسين loadOrders مع useCallback
+  const loadOrders = useCallback(async () => {
     setIsLoading(true);
     try {
       const userOrders = await orderService.getOrdersByClientId(user.id);
@@ -109,40 +39,79 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [user.id, toast]);
 
-  const handleOrderCreated = () => {
+  // تحميل الطلبات عند بداية التشغيل
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
+
+  // تحسين معالج تحديث الطلبات
+  const handleOrderUpdate = useCallback((updatedOrder: DesignOrder) => {
+    if (updatedOrder.client_id === user.id) {
+      setOrders(prev => {
+        const existingIndex = prev.findIndex(order => order.id === updatedOrder.id);
+        if (existingIndex >= 0) {
+          const newOrders = [...prev];
+          newOrders[existingIndex] = updatedOrder;
+          return newOrders;
+        } else {
+          return [updatedOrder, ...prev];
+        }
+      });
+    }
+  }, [user.id]);
+
+  // تحسين معالج الرسائل الجديدة
+  const handleNewMessage = useCallback((message: any, orderId: string) => {
+    setSelectedOrderId(orderId);
+    toast({
+      title: "رسالة جديدة من المصمم",
+      description: `رسالة في طلب: ${orders.find(o => o.id === orderId)?.design_type || 'غير محدد'}`
+    });
+  }, [orders, toast]);
+
+  const handleOrderCreated = useCallback(() => {
     setIsCreateOrderOpen(false);
     loadOrders();
     toast({
       title: "تم إنشاء الطلب",
       description: "تم إنشاء طلب التصميم بنجاح"
     });
-  };
+  }, [loadOrders, toast]);
 
-  const handleCreateOrder = () => {
+  const handleCreateOrder = useCallback(() => {
     setIsCreateOrderOpen(true);
-  };
+  }, []);
 
-  const handleOpenChat = (orderId: string) => {
+  const handleOpenChat = useCallback((orderId: string) => {
     setSelectedOrderId(orderId);
-  };
+  }, []);
 
-  if (selectedOrderId) {
-    const selectedOrder = orders.find(order => order.id === selectedOrderId);
-    if (selectedOrder) {
-      return (
-        <EnhancedChatWindow
-          user={user}
-          order={selectedOrder}
-          onClose={() => setSelectedOrderId(null)}
-        />
-      );
-    }
+  // تحسين حساب selectedOrder مع useMemo
+  const selectedOrder = useMemo(() => 
+    selectedOrderId ? orders.find(order => order.id === selectedOrderId) : null, 
+    [selectedOrderId, orders]
+  );
+  if (selectedOrder) {
+    return (
+      <EnhancedChatWindow
+        user={user}
+        order={selectedOrder}
+        onClose={() => setSelectedOrderId(null)}
+      />
+    );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50">
+      <OptimizedSubscriptions
+        user={user}
+        orders={orders}
+        onOrderUpdate={handleOrderUpdate}
+        onNewMessage={handleNewMessage}
+      />
+      
       <div className="max-w-6xl mx-auto p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6">
         <ClientHeader
           user={user}

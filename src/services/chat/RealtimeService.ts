@@ -18,7 +18,7 @@ export class RealtimeService {
 
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void): (() => void) | null {
     try {
-      console.log('=== Setting up real-time subscription ===');
+      console.log('=== Setting up optimized real-time subscription ===');
       console.log('Order ID:', orderId);
       
       if (!this.isValidUUID(orderId)) {
@@ -28,7 +28,7 @@ export class RealtimeService {
       
       const channelName = `messages-${orderId}`;
       
-      // إغلاق القناة الموجودة إن وجدت
+      // إغلاق القناة الموجودة إن وجدت (تحسين الذاكرة)
       if (this.activeChannels.has(channelName)) {
         console.log('Closing existing channel:', channelName);
         this.activeChannels.get(channelName)?.unsubscribe();
@@ -36,7 +36,12 @@ export class RealtimeService {
       }
 
       const channel = supabase
-        .channel(channelName)
+        .channel(channelName, {
+          config: {
+            presence: { key: orderId },
+            broadcast: { self: false, ack: false }, 
+          }
+        })
         .on(
           'postgres_changes',
           {
@@ -46,8 +51,7 @@ export class RealtimeService {
             filter: `order_id=eq.${orderId}`
           },
           (payload) => {
-            console.log('=== Real-time message received ===');
-            console.log('Payload:', payload);
+            console.log('=== Optimized real-time message received ===');
             
             if (!payload.new || typeof payload.new !== 'object') {
               console.warn('Invalid message payload received:', payload);
@@ -55,32 +59,39 @@ export class RealtimeService {
             }
 
             const messageData = payload.new as any;
-            console.log('Message data:', messageData);
             
-            const message = {
-              ...messageData,
+            // تحسين معالجة البيانات
+            const message: ChatMessage = {
+              id: messageData.id,
+              order_id: messageData.order_id,
+              room_id: messageData.room_id,
+              sender_id: messageData.sender_id,
+              sender_name: messageData.sender_name,
               sender_role: (messageData.sender_role || 'client') as 'client' | 'admin' | 'designer' | 'system',
-              message_type: (messageData.message_type || 'text') as 'text' | 'file' | 'system'
-            } as ChatMessage;
+              content: messageData.content,
+              message_type: (messageData.message_type || 'text') as 'text' | 'file' | 'system',
+              is_read: messageData.is_read || false,
+              created_at: messageData.created_at
+            };
             
-            console.log('Processed message:', message);
+            console.log('Processed optimized message:', message.id);
             callback(message);
           }
         )
         .subscribe((status) => {
-          console.log('Subscription status:', status);
+          console.log('Optimized subscription status:', status);
           if (status === 'SUBSCRIBED') {
-            console.log('Real-time connection established for order:', orderId);
+            console.log('Optimized real-time connection established for order:', orderId);
           } else if (status === 'CHANNEL_ERROR') {
-            console.error('Real-time channel error for order:', orderId);
+            console.error('Optimized real-time channel error for order:', orderId);
           }
         });
 
       this.activeChannels.set(channelName, channel);
-      console.log('Real-time subscription set up successfully');
+      console.log('Optimized real-time subscription set up successfully');
 
       return () => {
-        console.log('Unsubscribing from real-time messages for order:', orderId);
+        console.log('Unsubscribing from optimized real-time messages for order:', orderId);
         channel.unsubscribe();
         this.activeChannels.delete(channelName);
       };
