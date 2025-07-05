@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
-import EnhancedChatWindow from './chat/EnhancedChatWindow';
+import ImprovedChatWindow from './chat/ImprovedChatWindow';
 import { useToast } from '@/hooks/use-toast';
 import { orderDesignerService } from '@/services/orders/OrderDesignerService';
 import { DesignerProfileService } from '@/services/designers/designerProfileService';
@@ -88,8 +88,16 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
       console.log('Selected order:', selectedOrder);
       
       return (
-        <EnhancedChatWindow
-          user={designerProfile}
+        <ImprovedChatWindow
+          user={{ 
+            id: designerProfile.user_id, 
+            name: designerProfile.name, 
+            role: 'designer',
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            phone: null,
+            avatar_url: null
+          }}
           order={selectedOrder}
           onClose={() => setSelectedOrderId(null)}
         />
