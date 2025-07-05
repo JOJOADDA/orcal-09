@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { ChatMessage } from '@/types/database';
 import { pushNotificationService } from '@/services/notifications/pushNotificationService';
+import { oneSignalService } from '@/services/notifications/oneSignalService';
 import WhatsAppNotification from './WhatsAppNotification';
 import NotificationPermissionPrompt from './NotificationPermissionPrompt';
 
@@ -79,7 +80,9 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   }, []);
 
   const showNotification = useCallback(async (message: ChatMessage, onOpenChat: () => void, orderId?: string) => {
-    // إضافة الإشعار الجديد
+    console.log('Showing notification for message:', message.id);
+    
+    // إضافة الإشعار الداخلي
     const newNotification: ActiveNotification = {
       id: message.id,
       message,
@@ -92,10 +95,39 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
       return [...filtered, newNotification];
     });
 
-    // إرسال إشعار نظام التشغيل إذا كان الإذن ممنوح
+    // إرسال إشعار نظام التشغيل (خارجي) 
     if (hasNotificationPermission && orderId) {
       try {
-        await pushNotificationService.showNotification(message, orderId);
+        console.log('Sending system notification for order:', orderId);
+        
+        // محاولة استخدام OneSignal أولاً (للتطبيقات المحولة)
+        const oneSignalPermission = await oneSignalService.isPermissionGranted();
+        if (oneSignalPermission) {
+          console.log('Using OneSignal for notification');
+          await oneSignalService.showNotification(message, orderId);
+        } else {
+          // استخدام Web Push العادي
+          console.log('Using Web Push for notification');
+          
+          // إرسال الإشعار عبر Service Worker للظهور في شريط الإشعارات
+          const registration = await navigator.serviceWorker.ready;
+          if (registration && registration.active) {
+            // إرسال البيانات للـ Service Worker
+            registration.active.postMessage({
+              type: 'SHOW_NOTIFICATION',
+              data: {
+                title: `رسالة جديدة من ${message.sender_name}`,
+                body: message.content.substring(0, 100),
+                orderId: orderId,
+                messageId: message.id,
+                url: '/'
+              }
+            });
+          }
+          
+          // استخدام push notification service كنسخة احتياطية
+          await pushNotificationService.showNotification(message, orderId);
+        }
       } catch (error) {
         console.error('Error showing system notification:', error);
       }
@@ -104,7 +136,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
     // تشغيل صوت الإشعار
     playNotificationSound();
 
-    // إخفاء الإشعار الداخلي تلقائياً بعد 8 ثوان
+    // إخفاء الإشعار الداخلي تلقائياً بعد 8 ثوانٍ
     setTimeout(() => {
       hideNotification(message.id);
     }, 8000);

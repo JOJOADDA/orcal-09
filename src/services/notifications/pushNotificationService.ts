@@ -3,6 +3,10 @@ import { ChatMessage } from '@/types/database';
 class PushNotificationService {
   private registration: ServiceWorkerRegistration | null = null;
   private isSupported = false;
+  private subscription: PushSubscription | null = null;
+  
+  // VAPID keys للـ Web Push (يمكن الحصول عليها من web-push library)
+  private readonly vapidPublicKey = 'BMqSvZeUd7F5QzG-7-NjbQk8YpF1KZnNbVXz-8-v_4yKvDT0dERn3BT0zDPxL4R7YjE1F7KzF7FqR1XNR5QzQzG';
 
   constructor() {
     this.init();
@@ -15,17 +19,74 @@ class PushNotificationService {
     if (this.isSupported) {
       try {
         // تسجيل Service Worker
-        this.registration = await navigator.serviceWorker.register('/sw.js');
+        this.registration = await navigator.serviceWorker.register('/sw.js', {
+          scope: '/'
+        });
         console.log('Service Worker registered successfully');
         
         // انتظار تفعيل Service Worker
         await navigator.serviceWorker.ready;
         console.log('Service Worker is ready');
+        
+        // تفعيل push subscription
+        await this.setupPushSubscription();
       } catch (error) {
         console.error('Service Worker registration failed:', error);
         this.isSupported = false;
       }
     }
+  }
+
+  private async setupPushSubscription() {
+    if (!this.registration) return;
+
+    try {
+      // التحقق من وجود subscription موجود
+      const existingSubscription = await this.registration.pushManager.getSubscription();
+      
+      if (existingSubscription) {
+        this.subscription = existingSubscription;
+        console.log('Existing push subscription found');
+        return;
+      }
+
+      // إنشاء subscription جديد
+      const newSubscription = await this.registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: this.urlBase64ToUint8Array(this.vapidPublicKey)
+      });
+
+      this.subscription = newSubscription;
+      console.log('New push subscription created:', newSubscription);
+      
+      // هنا يمكن إرسال الـ subscription إلى الخادم لحفظه
+      await this.sendSubscriptionToServer(newSubscription);
+      
+    } catch (error) {
+      console.error('Error setting up push subscription:', error);
+    }
+  }
+
+  private urlBase64ToUint8Array(base64String: string): Uint8Array {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  private async sendSubscriptionToServer(subscription: PushSubscription) {
+    // هنا يمكن إرسال الـ subscription إلى الخادم
+    // في الوقت الحالي سنحفظه في localStorage كمثال
+    localStorage.setItem('pushSubscription', JSON.stringify(subscription));
+    console.log('Push subscription saved');
   }
 
   async requestPermission(): Promise<boolean> {

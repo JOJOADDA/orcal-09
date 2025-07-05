@@ -1,0 +1,33 @@
+{
+  "name": "أوركال - منصة التصميم",
+  "short_name": "أوركال",
+  "description": "منصة التصميم الأولى في الشرق الأوسط",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "32x32",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "192x192",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "512x512",
+      "type": "image/x-icon",
+      "purpose": "any maskable"
+    }
+  ],
+  "permissions": [
+    "notifications"
+  ],
+  "gcm_sender_id": "103953800507"
+}
