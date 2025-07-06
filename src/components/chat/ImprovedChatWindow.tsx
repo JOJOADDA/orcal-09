@@ -88,9 +88,26 @@ const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) =
         message_type: 'text'
       });
 
+      console.log('Send message result:', result);
+
       if (!result.success) {
-        throw new Error(result.error?.message || 'فشل في إرسال الرسالة');
+        const errorMessage = result.error?.message || 'فشل في إرسال الرسالة';
+        console.error('Failed to send message:', result.error);
+        
+        // إظهار رسالة خطأ مفصلة
+        toast({
+          title: "خطأ في إرسال الرسالة",
+          description: errorMessage,
+          variant: "destructive",
+          duration: 5000
+        });
+        
+        // استعادة الرسالة
+        setNewMessage(messageContent);
+        return;
       }
+      
+      console.log('Message sent successfully');
       
       // التمرير للأسفل بعد إرسال الرسالة
       setTimeout(scrollToBottom, 100);
@@ -101,12 +118,13 @@ const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) =
       }
       
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Unexpected error sending message:', error);
       setNewMessage(messageContent); // استعادة الرسالة عند الخطأ
       toast({
-        title: "خطأ في إرسال الرسالة",
-        description: "فشل في إرسال الرسالة. يرجى المحاولة مرة أخرى.",
-        variant: "destructive"
+        title: "خطأ غير متوقع",
+        description: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى أو إعادة تحميل الصفحة.",
+        variant: "destructive",
+        duration: 10000
       });
     } finally {
       setIsLoading(false);
@@ -137,7 +155,8 @@ const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) =
         
         toast({
           title: "رسالة جديدة",
-          description: `${newMessage.sender_name}: ${newMessage.content.substring(0, 50)}...`,
+          description: `${newMessage.sender_name}: ${newMessage.content.substring(0, 50)}${newMessage.content.length > 50 ? '...' : ''}`,
+          duration: 3000
         });
       }
     });
@@ -321,7 +340,7 @@ const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) =
                   ref={inputRef}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="اكتب رسالتك هنا..."
+                  placeholder={isLoading ? "جاري الإرسال..." : "اكتب رسالتك هنا..."}
                   className="h-12 rounded-full border-2 border-gray-200 focus:border-blue-400 px-4"
                   disabled={isLoading}
                   dir="rtl"

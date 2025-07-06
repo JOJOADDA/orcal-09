@@ -1,8 +1,7 @@
 
 import { ChatRoom, ChatMessage, OrderFile, MessageFile } from '@/types/database';
 import { chatRoomService } from './chat/ChatRoomService';
-import { messageService } from './chat/MessageService';
-import { designerMessageService } from './chat/DesignerMessageService';
+import { unifiedMessageService } from './chat/UnifiedMessageService';
 import { realtimeService } from './chat/RealtimeService';
 import { fileService } from './chat/FileService';
 
@@ -23,7 +22,7 @@ export class UnifiedChatService {
 
   // Message Methods
   async getMessages(orderId: string): Promise<ChatMessage[]> {
-    return messageService.getMessages(orderId);
+    return unifiedMessageService.getMessages(orderId);
   }
 
   async sendMessage(messageData: {
@@ -35,42 +34,19 @@ export class UnifiedChatService {
     message_type?: 'text' | 'file' | 'system';
     files?: OrderFile[];
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
-    
     console.log('=== UNIFIED CHAT SERVICE ===');
     console.log('Sending message from:', messageData.sender_role, messageData.sender_name);
 
-    // استخدام خدمة المصمم المحسنة للمصممين
-    if (messageData.sender_role === 'designer') {
-      console.log('Using designer message service for designer message');
-      const result = await designerMessageService.sendDesignerMessage({
-        order_id: messageData.order_id,
-        sender_id: messageData.sender_id,
-        sender_name: messageData.sender_name,
-        content: messageData.content,
-        message_type: messageData.message_type,
-        files: messageData.files
-      });
-      
-      // إضافة تسجيل للتأكد من إرسال الرسالة
-      if (result.success) {
-        console.log('Designer message sent successfully via unified service');
-      } else {
-        console.error('Failed to send designer message:', result.error);
-      }
-      
-      return result;
-    }
-
-    // استخدام الخدمة العادية للعملاء والإداريين
-    return messageService.sendMessage(messageData);
+    return unifiedMessageService.sendMessage(messageData);
   }
 
   async markMessagesAsRead(orderId: string, userId: string): Promise<boolean> {
-    return messageService.markMessagesAsRead(orderId, userId);
+    return unifiedMessageService.markMessagesAsRead(orderId, userId);
   }
 
   async getMessageFiles(messageId: string): Promise<MessageFile[]> {
-    return messageService.getMessageFiles(messageId);
+    // TODO: Implement in unified service if needed
+    return [];
   }
 
   // File Methods
@@ -79,7 +55,8 @@ export class UnifiedChatService {
   }
 
   async attachFileToMessage(messageId: string, file: OrderFile): Promise<boolean> {
-    return messageService.attachFileToMessage(messageId, file);
+    // TODO: Implement in unified service if needed
+    return false;
   }
 
   // Real-time Methods
