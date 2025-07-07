@@ -36,7 +36,7 @@ export default defineConfig(({ mode }) => ({
             '@radix-ui/react-dropdown-menu',
             '@radix-ui/react-toast',
             '@radix-ui/react-avatar',
-            '@radix-ui/react-button'
+            '@radix-ui/react-slot'
           ],
           // مكتبات البيانات
           'data-vendor': [
