@@ -1,5 +1,5 @@
 
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -7,8 +7,8 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { NotificationProvider } from "@/components/notifications/NotificationProvider";
 import LoadingScreen from "./components/LoadingScreen";
+import PerformanceMonitor from "./components/PerformanceMonitor";
 import { usePerfOptimization } from "@/hooks/usePerfOptimization";
-import { performanceService } from "@/services/performanceService";
 
 // تحميل الصفحات بشكل lazy للأداء الأفضل
 const FastIndex = lazy(() => import("./pages/FastIndex"));
@@ -38,6 +38,8 @@ const queryClient = new QueryClient({
 });
 
 const App = () => {
+  const [showPerformanceMonitor, setShowPerformanceMonitor] = useState(false);
+  
   // تطبيق تحسينات الأداء العامة
   usePerfOptimization();
 
@@ -55,6 +57,12 @@ const App = () => {
               </Routes>
             </Suspense>
           </BrowserRouter>
+          
+          {/* مراقب الأداء المحسن */}
+          <PerformanceMonitor 
+            isVisible={showPerformanceMonitor}
+            onToggle={() => setShowPerformanceMonitor(!showPerformanceMonitor)}
+          />
         </NotificationProvider>
       </TooltipProvider>
     </QueryClientProvider>

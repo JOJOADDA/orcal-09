@@ -2,7 +2,7 @@
 import { useToast } from '@/hooks/use-toast';
 import { DesignOrder } from '@/types/database';
 import { orderDesignerService } from '@/services/orders/OrderDesignerService';
-import { designerMessageService } from '@/services/chat/DesignerMessageService';
+import { unifiedChatService } from '@/services/unifiedChatService';
 
 interface DesignerOrderManagerProps {
   designerProfile: any;
@@ -43,12 +43,13 @@ const DesignerOrderManager = ({ designerProfile, onOrdersUpdate }: DesignerOrder
         return statusMap[status];
       };
 
-      // إرسال إشعار للعميل باستخدام خدمة المصمم المحسنة
-      console.log('Sending status update message using designer service');
-      const messageResult = await designerMessageService.sendDesignerMessage({
+      // إرسال إشعار للعميل باستخدام الخدمة السريعة المحسنة ⚡
+      console.log('⚡ Sending status update message using ultra-fast service');
+      const messageResult = await unifiedChatService.sendMessage({
         order_id: orderId,
-        sender_id: designerProfile.id,
+        sender_id: designerProfile.user_id,
         sender_name: designerProfile.name,
+        sender_role: 'designer',
         content: `تم تحديث حالة الطلب إلى: ${getStatusText(status)}`,
         message_type: 'system'
       });

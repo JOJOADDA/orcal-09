@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,12 +6,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { 
-  X, ArrowLeft, Send, MessageSquare, Phone, Video, MoreVertical
+  X, ArrowLeft, Send, MessageSquare, Phone, Video, MoreVertical, Zap
 } from 'lucide-react';
-import { Profile, ChatMessage, DesignOrder } from '@/types/database';
-import { useToast } from '@/hooks/use-toast';
-import { useNotifications } from '@/components/notifications/NotificationProvider';
-import { unifiedChatService } from '@/services/unifiedChatService';
+import { Profile, DesignOrder } from '@/types/database';
+import { useLightningChat } from '@/hooks/useLightningChat';
 import { cn } from '@/lib/utils';
 
 interface ImprovedChatWindowProps {
@@ -21,152 +19,42 @@ interface ImprovedChatWindowProps {
 }
 
 const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
-  const [onlineStatus, setOnlineStatus] = useState(true);
-  
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const { toast } = useToast();
-  const { showNotification } = useNotifications();
+  
+  // استخدام Lightning Chat Hook السريع ⚡
+  const {
+    messages,
+    isLoading,
+    isLoadingMessages,
+    onlineStatus,
+    messagesEndRef,
+    sendMessage: lightningChatSend,
+    getPerformanceStats
+  } = useLightningChat({ user, order });
 
-  // تحسين التمرير إلى الأسفل
-  const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'end'
-      });
-    }
-  }, []);
-
-  // تحميل الرسائل
-  const loadMessages = useCallback(async () => {
-    setIsLoadingMessages(true);
-    try {
-      console.log('Loading messages for order:', order.id);
-      const orderMessages = await unifiedChatService.getMessages(order.id);
-      setMessages(orderMessages);
-      await unifiedChatService.markMessagesAsRead(order.id, user.id);
-      
-      // التمرير للأسفل بعد تحميل الرسائل
-      setTimeout(scrollToBottom, 100);
-    } catch (error) {
-      console.error('Error loading messages:', error);
-      toast({
-        title: "خطأ",
-        description: "فشل في تحميل الرسائل",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoadingMessages(false);
-    }
-  }, [order.id, user.id, toast, scrollToBottom]);
-
-  // إرسال رسالة
-  const handleSendMessage = useCallback(async (e: React.FormEvent) => {
+  // إرسال رسالة محسن
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!newMessage.trim() || isLoading) return;
 
     const messageContent = newMessage.trim();
     setNewMessage('');
-    setIsLoading(true);
     
-    try {
-      console.log('Sending message:', messageContent);
-      
-      const result = await unifiedChatService.sendMessage({
-        order_id: order.id,
-        sender_id: user.id,
-        sender_name: user.name,
-        sender_role: user.role as 'client' | 'admin' | 'designer' | 'system',
-        content: messageContent,
-        message_type: 'text'
-      });
-
-      console.log('Send message result:', result);
-
-      if (!result.success) {
-        const errorMessage = result.error?.message || 'فشل في إرسال الرسالة';
-        console.error('Failed to send message:', result.error);
-        
-        // إظهار رسالة خطأ مفصلة
-        toast({
-          title: "خطأ في إرسال الرسالة",
-          description: errorMessage,
-          variant: "destructive",
-          duration: 5000
-        });
-        
-        // استعادة الرسالة
-        setNewMessage(messageContent);
-        return;
-      }
-      
-      console.log('Message sent successfully');
-      
-      // التمرير للأسفل بعد إرسال الرسالة
-      setTimeout(scrollToBottom, 100);
-      
+    const success = await lightningChatSend(messageContent);
+    
+    if (success) {
       // إعادة التركيز على الحقل
       if (inputRef.current) {
         inputRef.current.focus();
       }
-      
-    } catch (error) {
-      console.error('Unexpected error sending message:', error);
-      setNewMessage(messageContent); // استعادة الرسالة عند الخطأ
-      toast({
-        title: "خطأ غير متوقع",
-        description: "حدث خطأ غير متوقع. يرجى المحاولة مرة أخرى أو إعادة تحميل الصفحة.",
-        variant: "destructive",
-        duration: 10000
-      });
-    } finally {
-      setIsLoading(false);
+    } else {
+      // استعادة الرسالة عند الفشل
+      setNewMessage(messageContent);
     }
-  }, [newMessage, isLoading, order.id, user.id, user.name, user.role, toast, scrollToBottom]);
-
-  // الاشتراك في الرسائل الفورية
-  useEffect(() => {
-    loadMessages();
-    
-    const unsubscribe = unifiedChatService.subscribeToMessages(order.id, (newMessage) => {
-      console.log('New message received:', newMessage);
-      setMessages(prev => {
-        const exists = prev.find(msg => msg.id === newMessage.id);
-        if (exists) return prev;
-        
-        const updated = [...prev, newMessage];
-        // التمرير للأسفل عند وصول رسالة جديدة
-        setTimeout(scrollToBottom, 100);
-        return updated;
-      });
-      
-      // إشعار للرسائل من المستخدمين الآخرين
-      if (newMessage.sender_id !== user.id) {
-        showNotification(newMessage, () => {
-          console.log('Opening chat from notification');
-        }, order.id);
-        
-        toast({
-          title: "رسالة جديدة",
-          description: `${newMessage.sender_name}: ${newMessage.content.substring(0, 50)}${newMessage.content.length > 50 ? '...' : ''}`,
-          duration: 3000
-        });
-      }
-    });
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [order.id, user.id, loadMessages, showNotification, toast, scrollToBottom]);
+  };
 
   // معلومات حالة الطلب
   const getStatusColor = (status: DesignOrder['status']) => {
@@ -196,7 +84,7 @@ const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) =
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-4xl h-[90vh] bg-white shadow-2xl flex flex-col border-0 overflow-hidden">
-        {/* Header مع زر الرجوع */}
+        {/* Header محسن مع مؤشر الأداء */}
         <div className="flex flex-row items-center justify-between space-y-0 p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
           <div className="flex items-center gap-3">
             {/* زر الرجوع */}
@@ -226,6 +114,10 @@ const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) =
                 >
                   {getStatusText(order.status)}
                 </Badge>
+                <Badge className="bg-green-500/20 text-green-200 border-green-300/20 text-xs">
+                  <Zap className="w-3 h-3 mr-1" />
+                  سريع
+                </Badge>
               </div>
               <div className="flex items-center gap-2 text-sm text-white/80">
                 <span>العميل: {order.client_name}</span>
@@ -233,10 +125,12 @@ const ImprovedChatWindow = ({ user, order, onClose }: ImprovedChatWindowProps) =
                 <span className="flex items-center gap-1">
                   <div className={cn(
                     "w-2 h-2 rounded-full",
-                    onlineStatus ? "bg-green-400" : "bg-gray-400"
+                    onlineStatus ? "bg-green-400 animate-pulse" : "bg-gray-400"
                   )} />
                   {onlineStatus ? "متصل" : "غير متصل"}
                 </span>
+                <span>•</span>
+                <span className="text-xs">رسائل: {messages.length}</span>
               </div>
             </div>
           </div>

@@ -1,8 +1,6 @@
 
 import { ChatRoom, ChatMessage, OrderFile, MessageFile } from '@/types/database';
-import { chatRoomService } from './chat/ChatRoomService';
-import { unifiedMessageService } from './chat/UnifiedMessageService';
-import { realtimeService } from './chat/RealtimeService';
+import { ultraFastChatService } from './chat/UltraFastChatService';
 import { fileService } from './chat/FileService';
 
 export class UnifiedChatService {
@@ -15,14 +13,9 @@ export class UnifiedChatService {
     return UnifiedChatService.instance;
   }
 
-  // Chat Room Methods
-  async getOrCreateChatRoom(orderId: string, userId: string, userRole: string = 'client'): Promise<ChatRoom | null> {
-    return chatRoomService.getOrCreateChatRoom(orderId, userId, userRole);
-  }
-
-  // Message Methods
+  // Message Methods - Ultra Fast 🚀
   async getMessages(orderId: string): Promise<ChatMessage[]> {
-    return unifiedMessageService.getMessages(orderId);
+    return ultraFastChatService.getMessages(orderId);
   }
 
   async sendMessage(messageData: {
@@ -34,14 +27,14 @@ export class UnifiedChatService {
     message_type?: 'text' | 'file' | 'system';
     files?: OrderFile[];
   }): Promise<{ success: boolean; message?: ChatMessage; error?: any }> {
-    console.log('=== UNIFIED CHAT SERVICE ===');
+    console.log('🚀 ULTRA FAST UNIFIED CHAT SERVICE 🚀');
     console.log('Sending message from:', messageData.sender_role, messageData.sender_name);
 
-    return unifiedMessageService.sendMessage(messageData);
+    return ultraFastChatService.sendMessage(messageData);
   }
 
   async markMessagesAsRead(orderId: string, userId: string): Promise<boolean> {
-    return unifiedMessageService.markMessagesAsRead(orderId, userId);
+    return ultraFastChatService.markMessagesAsRead(orderId, userId);
   }
 
   async getMessageFiles(messageId: string): Promise<MessageFile[]> {
@@ -59,13 +52,18 @@ export class UnifiedChatService {
     return false;
   }
 
-  // Real-time Methods
+  // Real-time Methods - Ultra Fast 🚀
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void): (() => void) | null {
-    return realtimeService.subscribeToMessages(orderId, callback);
+    return ultraFastChatService.subscribeToMessages(orderId, callback);
   }
 
   cleanup() {
-    realtimeService.cleanup();
+    ultraFastChatService.cleanup();
+  }
+
+  // إحصائيات الأداء
+  getPerformanceStats(): Record<string, any> {
+    return ultraFastChatService.getPerformanceStats();
   }
 }
 
