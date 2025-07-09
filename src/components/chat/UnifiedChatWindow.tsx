@@ -63,6 +63,11 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
     'application/zip', 'application/x-zip-compressed',
     'text/plain',
   ];
+  // الامتدادات الممنوعة (تنفيذية)
+  const forbiddenExtensions = [
+    'exe', 'sh', 'bat', 'js', 'php', 'py', 'apk', 'app', 'msi'
+  ];
+  const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
   // معالجة السحب والإفلات
   const handleDragEnter = (e: React.DragEvent) => {
@@ -86,6 +91,15 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
     setIsDragging(false);
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
+    const ext = file.name.split('.').pop()?.toLowerCase();
+    if (forbiddenExtensions.includes(ext || '')) {
+      toast({ title: 'ملف غير آمن', description: 'لا يسمح برفع ملفات تنفيذية أو خطرة.', variant: 'destructive' });
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      toast({ title: 'الملف كبير جدًا', description: 'الحد الأقصى للحجم هو 10 ميجابايت.', variant: 'destructive' });
+      return;
+    }
     if (!allowedTypes.includes(file.type)) {
       toast({ title: 'نوع الملف غير مدعوم', description: 'يرجى رفع صورة أو ملف مستند أو مضغوط أو نصي فقط.', variant: 'destructive' });
       return;
@@ -419,7 +433,21 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                 className="hidden"
                 onChange={e => {
                   if (e.target.files && e.target.files[0]) {
-                    setSelectedFile(e.target.files[0]);
+                    const file = e.target.files[0];
+                    const ext = file.name.split('.').pop()?.toLowerCase();
+                    if (forbiddenExtensions.includes(ext || '')) {
+                      toast({ title: 'ملف غير آمن', description: 'لا يسمح برفع ملفات تنفيذية أو خطرة.', variant: 'destructive' });
+                      return;
+                    }
+                    if (file.size > MAX_FILE_SIZE) {
+                      toast({ title: 'الملف كبير جدًا', description: 'الحد الأقصى للحجم هو 10 ميجابايت.', variant: 'destructive' });
+                      return;
+                    }
+                    if (!allowedTypes.includes(file.type)) {
+                      toast({ title: 'نوع الملف غير مدعوم', description: 'يرجى رفع صورة أو ملف مستند أو مضغوط أو نصي فقط.', variant: 'destructive' });
+                      return;
+                    }
+                    setSelectedFile(file);
                   }
                 }}
                 accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/x-zip-compressed,.rar,.zip,.7z,.txt,.doc,.docx"
