@@ -1,3 +1,4 @@
+import React from 'react';
 import { useState, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +12,9 @@ import { useToast } from '@/hooks/use-toast';
 import { useLightningChat } from '@/hooks/useLightningChat';
 import { cn } from '@/lib/utils';
 import { unifiedChatService } from '@/services/unifiedChatService';
+import Picker from 'emoji-mart/dist/components/picker/picker';
+import 'emoji-mart/css/emoji-mart.css';
+import { FixedSizeList as List } from 'react-window';
 
 interface UnifiedChatWindowProps {
   user: Profile;
@@ -25,6 +29,27 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [replyTo, setReplyTo] = useState<null | { id: string; sender: string; content: string }> (null);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  // عدد الرسائل المعروضة (للتجربة، اجلب 20 رسالة في كل مرة)
+  const [visibleCount, setVisibleCount] = useState(30);
+
+  // دالة وهمية لجلب الرسائل القديمة (يجب ربطها لاحقًا مع unifiedChatService)
+  const loadOlderMessages = async () => {
+    setLoadingOlder(true);
+    // محاكاة تحميل المزيد
+    await new Promise(res => setTimeout(res, 700));
+    setVisibleCount(c => c + 20);
+    setLoadingOlder(false);
+  };
+
+  // مراقبة التمرير للأعلى
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (e.currentTarget.scrollTop < 40 && !loadingOlder) {
+      loadOlderMessages();
+    }
+  };
 
   // استخدام hook الدردشة الأسرع
   const {
@@ -41,13 +66,18 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if ((!newMessage.trim() && !selectedFile) || isLoading || uploading) return;
+    let replyPrefix = '';
+    if (replyTo) {
+      replyPrefix = `[رد على: ${replyTo.sender}]: ${replyTo.content}\n`;
+    }
     if (selectedFile) {
       setUploading(true);
       try {
         const uploaded = await unifiedChatService.uploadFile(selectedFile, order.id, user.id);
         if (uploaded) {
-          await sendMessage(`[ملف]: ${uploaded.name}\n${uploaded.url}`, 'file');
+          await sendMessage(replyPrefix + `[ملف]: ${uploaded.name}\n${uploaded.url}`, 'file');
           setSelectedFile(null);
+          setReplyTo(null);
         } else {
           toast({ title: 'خطأ في رفع الملف', description: 'تعذر رفع الملف. حاول مرة أخرى.', variant: 'destructive' });
         }
@@ -57,8 +87,9 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
         setUploading(false);
       }
     } else if (newMessage.trim()) {
-      const messageContent = newMessage.trim();
+      const messageContent = replyPrefix + newMessage.trim();
       setNewMessage('');
+      setReplyTo(null);
       const success = await sendMessage(messageContent);
       if (!success) {
         setNewMessage(messageContent);
@@ -90,6 +121,24 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
   };
   const getInitials = (name: string) => {
     return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+  };
+
+  // إدراج رمز تعبيري في الموضع الحالي للمؤشر
+  const insertEmoji = (emoji: any) => {
+    const emojiChar = emoji.native;
+    const input = inputRef.current;
+    if (!input) {
+      setNewMessage(prev => prev + emojiChar);
+      return;
+    }
+    const start = input.selectionStart || 0;
+    const end = input.selectionEnd || 0;
+    const newValue = newMessage.slice(0, start) + emojiChar + newMessage.slice(end);
+    setNewMessage(newValue);
+    setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(start + emojiChar.length, start + emojiChar.length);
+    }, 0);
   };
 
   return (
@@ -137,7 +186,10 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
         </div>
         <CardContent className="flex-1 flex flex-col p-0 bg-gray-50 dark:bg-gray-800">
           {/* منطقة الرسائل */}
-          <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
+          <ScrollArea ref={scrollAreaRef} className="flex-1 p-4" onScroll={handleScroll}>
+            {loadingOlder && (
+              <div className="text-center py-2 text-xs text-gray-400">جاري تحميل رسائل أقدم...</div>
+            )}
             {isLoadingMessages ? (
               <div className="text-center py-12">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
@@ -150,12 +202,18 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                 <p className="text-gray-400">ابدأ المحادثة بإرسال رسالة</p>
               </div>
             ) : (
-              <div className="space-y-4">
-                {messages.map((message, index) => {
+              <List
+                height={500}
+                itemCount={messages.slice(-visibleCount).length}
+                itemSize={110}
+                width={"100%"}
+                className="space-y-4"
+              >
+                {({ index, style }) => {
+                  const message = messages.slice(-visibleCount)[index];
                   const isOwnMessage = message.sender_id === user.id;
-                  const showAvatar = !isOwnMessage && (index === 0 || messages[index - 1].sender_id !== message.sender_id);
+                  const showAvatar = !isOwnMessage && (index === 0 || messages.slice(-visibleCount)[index - 1]?.sender_id !== message.sender_id);
                   const isFile = message.message_type === 'file' || message.content.startsWith('[ملف]:');
-                  // معاينة صورة إذا كان الملف صورة
                   let fileUrl = '';
                   let fileName = '';
                   if (isFile) {
@@ -165,8 +223,15 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                       fileUrl = match[2];
                     }
                   }
+                  let replyBlock = null;
+                  let contentWithoutReply = message.content;
+                  const replyMatch = message.content.match(/^\[رد على: (.+?)\]: ([^\n]+)\n([\s\S]*)/);
+                  if (replyMatch) {
+                    replyBlock = { sender: replyMatch[1], content: replyMatch[2] };
+                    contentWithoutReply = replyMatch[3];
+                  }
                   return (
-                    <div key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} gap-2`}>
+                    <div style={style} key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} gap-2 group relative`}>
                       {showAvatar && !isOwnMessage && (
                         <Avatar className="h-8 w-8 mt-auto">
                           <AvatarFallback className="bg-blue-100 text-blue-600 text-xs">
@@ -183,6 +248,12 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                             : 'bg-white text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600'
                         }`}
                       >
+                        {replyBlock && (
+                          <div className="mb-2 p-2 rounded bg-gray-100 dark:bg-gray-700 text-xs text-gray-600 dark:text-gray-300 border-l-4 border-blue-400">
+                            <span className="font-bold">رد على: {replyBlock.sender}</span>
+                            <div className="truncate">{replyBlock.content}</div>
+                          </div>
+                        )}
                         {isFile && fileUrl ? (
                           <div className="flex flex-col gap-2">
                             {fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
@@ -196,30 +267,48 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                           </div>
                         ) : (
                           <>
-                            {message.content}
+                            {contentWithoutReply}
                             <div className="text-xs text-gray-400 mt-1 text-left ltr:text-right rtl:text-left">
                               {message.sender_name}
                             </div>
                           </>
                         )}
                       </div>
+                      {/* زر الرد */}
+                      <button
+                        type="button"
+                        className="absolute -top-2 -left-8 opacity-0 group-hover:opacity-100 transition-opacity bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-full p-1 shadow hover:bg-blue-100 dark:hover:bg-blue-900"
+                        title="رد"
+                        onClick={() => setReplyTo({ id: message.id, sender: message.sender_name, content: isFile ? (fileName || 'ملف') : contentWithoutReply })}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4 text-blue-500">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                      </button>
                     </div>
                   );
-                })}
-                {isTyping && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">...</div>
-                    <span className="text-gray-500 text-sm">يكتب الآن...</span>
-                  </div>
-                )}
-                <div ref={messagesEndRef} />
+                }}
+              </List>
+            )}
+            {isTyping && (
+              <div className="flex items-center gap-2 mt-2">
+                <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">...</div>
+                <span className="text-gray-500 text-sm">يكتب الآن...</span>
               </div>
             )}
-            {/* chatError && (
-              <div className="text-center text-red-500 mt-2">{chatError}</div>
-            ) */}
+            <div ref={messagesEndRef} />
           </ScrollArea>
           <div className="border-t bg-white p-4">
+            {/* معاينة الرد */}
+            {replyTo && (
+              <div className="mb-2 flex items-center gap-2 bg-blue-50 dark:bg-blue-900 border-l-4 border-blue-400 rounded p-2 text-xs text-blue-800 dark:text-blue-200">
+                <span className="font-bold">رد على: {replyTo.sender}</span>
+                <span className="truncate">{replyTo.content}</span>
+                <button type="button" className="ml-auto text-blue-400 hover:text-blue-700" onClick={() => setReplyTo(null)}>
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            )}
             <form onSubmit={handleSendMessage} className="flex gap-3 items-center">
               <Button
                 type="button"
@@ -234,6 +323,27 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
               >
                 <Paperclip className="w-5 h-5 text-gray-500" />
               </Button>
+              <Button
+                type="button"
+                className="h-12 w-12 rounded-full bg-gray-100 hover:bg-gray-200 p-0 flex items-center justify-center"
+                onClick={() => setShowEmojiPicker(v => !v)}
+                aria-label="إدراج رمز تعبيري"
+                disabled={isLoading || uploading}
+              >
+                <span role="img" aria-label="emoji">😊</span>
+              </Button>
+              {showEmojiPicker && (
+                <div className="absolute bottom-20 left-0 z-50">
+                  <Picker
+                    set="apple"
+                    theme={document.documentElement.classList.contains('dark') ? 'dark' : 'light'}
+                    onSelect={insertEmoji}
+                    showPreview={false}
+                    showSkinTones={false}
+                    style={{ boxShadow: '0 2px 12px rgba(0,0,0,0.15)' }}
+                  />
+                </div>
+              )}
               <input
                 id="chat-file-input"
                 type="file"
