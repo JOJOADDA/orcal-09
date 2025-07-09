@@ -36,6 +36,7 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
   const [loadingOlder, setLoadingOlder] = useState(false);
   // عدد الرسائل المعروضة (للتجربة، اجلب 20 رسالة في كل مرة)
   const [visibleCount, setVisibleCount] = useState(30);
+  const [isDragging, setIsDragging] = useState(false);
 
   // دالة وهمية لجلب الرسائل القديمة (يجب ربطها لاحقًا مع unifiedChatService)
   const loadOlderMessages = async () => {
@@ -51,6 +52,45 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
     if (e.currentTarget.scrollTop < 40 && !loadingOlder) {
       loadOlderMessages();
     }
+  };
+
+  // أنواع الملفات المسموحة
+  const allowedTypes = [
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/zip', 'application/x-zip-compressed',
+    'text/plain',
+  ];
+
+  // معالجة السحب والإفلات
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    if (!allowedTypes.includes(file.type)) {
+      toast({ title: 'نوع الملف غير مدعوم', description: 'يرجى رفع صورة أو ملف مستند أو مضغوط أو نصي فقط.', variant: 'destructive' });
+      return;
+    }
+    setSelectedFile(file);
   };
 
   // استخدام hook الدردشة الأسرع
@@ -161,7 +201,16 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
   // (react-window يحافظ تلقائيًا على الموضع إذا لم يتغير itemCount بشكل كبير)
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div
+      className={
+        `fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 ${isDragging ? 'ring-4 ring-blue-400/60' : ''}`
+      }
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      style={{ transition: 'box-shadow 0.2s' }}
+    >
       <Card className="w-full max-w-4xl h-[90vh] bg-white dark:bg-gray-900 shadow-2xl flex flex-col border-0 overflow-hidden">
         {/* Header */}
         <div className="flex flex-row items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white dark:from-gray-800 dark:to-gray-900">
@@ -377,7 +426,14 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
               />
               {selectedFile && (
                 <div className="text-xs text-gray-700 bg-gray-100 rounded px-2 py-1 flex items-center gap-2">
-                  <span>{selectedFile.name}</span>
+                  {selectedFile.type.startsWith('image/') ? (
+                    <img src={URL.createObjectURL(selectedFile)} alt={selectedFile.name} className="w-10 h-10 object-cover rounded mr-2 border" />
+                  ) : (
+                    <span className="inline-flex items-center gap-1">
+                      <span className="bg-blue-200 text-blue-700 rounded px-1 py-0.5 text-xs">{selectedFile.name.split('.').pop()?.toUpperCase()}</span>
+                      <span>{selectedFile.name}</span>
+                    </span>
+                  )}
                   <Button type="button" size="sm" variant="ghost" className="p-1" onClick={() => setSelectedFile(null)}>
                     <X className="w-3 h-3" />
                   </Button>
