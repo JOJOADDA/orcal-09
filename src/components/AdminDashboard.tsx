@@ -20,7 +20,7 @@ import {
 import { DesignOrder, Profile } from '@/types/database';
 import { orderService } from '@/services/orders/orderService';
 import { statisticsService } from '@/services/statistics/statisticsService';
-import ChatWindow from './chat/ChatWindow';
+import UnifiedChatWindow from './chat/UnifiedChatWindow';
 import { useToast } from '@/hooks/use-toast';
 
 interface AdminDashboardProps {
@@ -149,7 +149,7 @@ const AdminDashboard = ({ user, onLogout }: AdminDashboardProps) => {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
       return (
-        <ChatWindow
+        <UnifiedChatWindow
           user={user}
           order={selectedOrder}
           onClose={() => setSelectedOrderId(null)}

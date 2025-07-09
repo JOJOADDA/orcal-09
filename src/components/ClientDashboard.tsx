@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { DesignOrder, Profile } from '@/types/database';
 import CreateOrderDialog from './CreateOrderDialog';
-import ImprovedChatWindow from './chat/ImprovedChatWindow';
+import UnifiedChatWindow from './chat/UnifiedChatWindow';
 import OptimizedSubscriptions from './OptimizedSubscriptions';
 import { useToast } from '@/hooks/use-toast';
 import { orderService } from '@/services/orders/orderService';
@@ -95,7 +95,7 @@ const ClientDashboard = ({ user, onLogout }: ClientDashboardProps) => {
   );
   if (selectedOrder) {
     return (
-      <ImprovedChatWindow
+      <UnifiedChatWindow
         user={user}
         order={selectedOrder}
         onClose={() => setSelectedOrderId(null)}

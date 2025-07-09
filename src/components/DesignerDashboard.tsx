@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { DesignOrder } from '@/types/database';
-import ImprovedChatWindow from './chat/ImprovedChatWindow';
+import UnifiedChatWindow from './chat/UnifiedChatWindow';
 import { useToast } from '@/hooks/use-toast';
 import { orderDesignerService } from '@/services/orders/OrderDesignerService';
 import { DesignerProfileService } from '@/services/designers/designerProfileService';
@@ -83,12 +83,8 @@ const DesignerDashboard = ({ designerData, onLogout }: DesignerDashboardProps) =
   if (selectedOrderId) {
     const selectedOrder = orders.find(order => order.id === selectedOrderId);
     if (selectedOrder) {
-      console.log('=== Opening chat window ===');
-      console.log('Designer profile for chat:', designerProfile);
-      console.log('Selected order:', selectedOrder);
-      
       return (
-        <ImprovedChatWindow
+        <UnifiedChatWindow
           user={{ 
             id: designerProfile.user_id, 
             name: designerProfile.name, 
