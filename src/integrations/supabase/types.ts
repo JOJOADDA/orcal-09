@@ -70,6 +70,13 @@ export type Database = {
             foreignKeyName: "chat_messages_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -111,7 +118,21 @@ export type Database = {
             foreignKeyName: "chat_rooms_admin_id_fkey"
             columns: ["admin_id"]
             isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chat_rooms_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "active_designers"
             referencedColumns: ["id"]
           },
           {
@@ -174,6 +195,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "design_orders_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "design_orders_client_id_fkey"
             columns: ["client_id"]
@@ -309,6 +337,13 @@ export type Database = {
             foreignKeyName: "order_files_uploaded_by_fkey"
             columns: ["uploaded_by"]
             isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_files_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -379,7 +414,19 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      active_designers: {
+        Row: {
+          email: string | null
+          id: string | null
+          is_active: boolean | null
+          is_verified: boolean | null
+          name: string | null
+          phone: string | null
+          role: string | null
+          specialization: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       add_designer: {
@@ -432,6 +479,10 @@ export type Database = {
           is_verified: boolean
           is_active: boolean
         }[]
+      }
+      is_active_designer: {
+        Args: { user_id?: string }
+        Returns: boolean
       }
       is_designer: {
         Args: { user_id?: string }
