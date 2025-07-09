@@ -94,9 +94,9 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <Card className="w-full max-w-4xl h-[90vh] bg-white shadow-2xl flex flex-col border-0 overflow-hidden">
+      <Card className="w-full max-w-4xl h-[90vh] bg-white dark:bg-gray-900 shadow-2xl flex flex-col border-0 overflow-hidden">
         {/* Header */}
-        <div className="flex flex-row items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+        <div className="flex flex-row items-center justify-between p-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white dark:from-gray-800 dark:to-gray-900">
           <div className="flex items-center gap-3">
             <Button variant="ghost" size="sm" onClick={onClose} className="text-white hover:bg-white/10 p-2">
               <ArrowLeft className="w-5 h-5" />
@@ -135,7 +135,7 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
             </Button>
           </div>
         </div>
-        <CardContent className="flex-1 flex flex-col p-0 bg-gray-50">
+        <CardContent className="flex-1 flex flex-col p-0 bg-gray-50 dark:bg-gray-800">
           {/* منطقة الرسائل */}
           <ScrollArea ref={scrollAreaRef} className="flex-1 p-4">
             {isLoadingMessages ? (
@@ -154,6 +154,17 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                 {messages.map((message, index) => {
                   const isOwnMessage = message.sender_id === user.id;
                   const showAvatar = !isOwnMessage && (index === 0 || messages[index - 1].sender_id !== message.sender_id);
+                  const isFile = message.message_type === 'file' || message.content.startsWith('[ملف]:');
+                  // معاينة صورة إذا كان الملف صورة
+                  let fileUrl = '';
+                  let fileName = '';
+                  if (isFile) {
+                    const match = message.content.match(/\[ملف\]: (.+)\n(.+)/);
+                    if (match) {
+                      fileName = match[1];
+                      fileUrl = match[2];
+                    }
+                  }
                   return (
                     <div key={message.id} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} gap-2`}>
                       {showAvatar && !isOwnMessage && (
@@ -163,11 +174,34 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                           </AvatarFallback>
                         </Avatar>
                       )}
-                      <div className={`max-w-[70%] rounded-2xl p-3 ${isOwnMessage ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white' : message.sender_role === 'system' ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' : 'bg-white text-gray-800 border border-gray-200'}`}>
-                        {message.content}
-                        <div className="text-xs text-gray-400 mt-1 text-left ltr:text-right rtl:text-left">
-                          {message.sender_name}
-                        </div>
+                      <div
+                        className={`max-w-[70%] rounded-2xl p-3 break-words shadow-md ${
+                          isOwnMessage
+                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white dark:from-blue-700 dark:to-purple-800'
+                            : message.sender_role === 'system'
+                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-200 dark:bg-yellow-200 dark:text-yellow-900'
+                            : 'bg-white text-gray-800 border border-gray-200 dark:bg-gray-700 dark:text-gray-100 dark:border-gray-600'
+                        }`}
+                      >
+                        {isFile && fileUrl ? (
+                          <div className="flex flex-col gap-2">
+                            {fileUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? (
+                              <img src={fileUrl} alt={fileName} className="rounded-lg max-h-48 max-w-full object-contain border mb-1" />
+                            ) : (
+                              <a href={fileUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline dark:text-blue-300">{fileName || 'ملف مرفق'}</a>
+                            )}
+                            <div className="text-xs text-gray-400 mt-1 text-left ltr:text-right rtl:text-left">
+                              {message.sender_name}
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            {message.content}
+                            <div className="text-xs text-gray-400 mt-1 text-left ltr:text-right rtl:text-left">
+                              {message.sender_name}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   );
