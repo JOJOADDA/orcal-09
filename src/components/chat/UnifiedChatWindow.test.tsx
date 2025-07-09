@@ -1,39 +1,76 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import React from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import UnifiedChatWindow from './UnifiedChatWindow';
-import { Profile, DesignOrder } from '@/types/database';
+import { vi } from 'vitest';
+
+// Mockات أساسية
+vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
+vi.mock('@/hooks/useLightningChat', () => ({
+  useLightningChat: () => ({
+    messages: [
+      { id: '1', sender_id: 'u1', sender_name: 'أحمد', sender_role: 'client', content: 'مرحبا', message_type: 'text' },
+      { id: '2', sender_id: 'u2', sender_name: 'سارة', sender_role: 'designer', content: 'أهلا بك', message_type: 'text' },
+    ],
+    isLoading: false,
+    isLoadingMessages: false,
+    onlineStatus: true,
+    messagesEndRef: { current: null },
+    sendMessage: vi.fn(async () => true),
+    isTyping: false,
+  })
+}));
+vi.mock('@/services/unifiedChatService', () => ({
+  unifiedChatService: {
+    uploadFile: vi.fn(async () => ({ name: 'test.png', url: 'https://test.com/test.png' }))
+  }
+}));
+
+const user = { id: 'u1', name: 'أحمد', role: 'client' };
+const order = { id: 'o1', client_name: 'أحمد', design_type: 'شعار', status: 'pending' };
 
 describe('UnifiedChatWindow', () => {
-  const user: Profile = {
-    id: 'user1',
-    name: 'مستخدم تجريبي',
-    role: 'client',
-    created_at: '',
-    updated_at: '',
-    phone: '',
-    avatar_url: null
-  };
-  const order: DesignOrder = {
-    id: 'order1',
-    client_id: 'user1',
-    client_name: 'مستخدم تجريبي',
-    design_type: 'شعار',
-    description: 'طلب شعار',
-    status: 'pending',
-    priority: 'medium',
-    created_at: '',
-    updated_at: '',
-    total_price: 0,
-    client_phone: '',
-    designer_id: null,
-    designer_name: null,
-    delivered_at: null
-  };
+  it('يظهر الرسائل بشكل صحيح', () => {
+    render(<UnifiedChatWindow user={user as any} order={order as any} onClose={() => {}} />);
+    expect(screen.getByText('مرحبا')).toBeInTheDocument();
+    expect(screen.getByText('أهلا بك')).toBeInTheDocument();
+  });
 
-  it('should render chat window and allow sending a message', () => {
-    render(<UnifiedChatWindow user={user} order={order} onClose={() => {}} />);
-    expect(screen.getByPlaceholderText('اكتب رسالتك هنا...')).toBeInTheDocument();
-    fireEvent.change(screen.getByPlaceholderText('اكتب رسالتك هنا...'), { target: { value: 'رسالة اختبار' } });
-    fireEvent.click(screen.getByRole('button'));
-    // لا يمكن التحقق من ظهور الرسالة مباشرة لأن الدالة sendMessage وهمية في الاختبار
+  it('يرسل رسالة نصية', async () => {
+    render(<UnifiedChatWindow user={user as any} order={order as any} onClose={() => {}} />);
+    const input = screen.getByPlaceholderText('اكتب رسالتك هنا...');
+    fireEvent.change(input, { target: { value: 'اختبار' } });
+    fireEvent.click(screen.getByRole('button', { name: /إرسال/i }));
+    await waitFor(() => {
+      expect(input).toHaveValue('');
+    });
+  });
+
+  it('يرفض رفع ملف غير مدعوم', async () => {
+    render(<UnifiedChatWindow user={user as any} order={order as any} onClose={() => {}} />);
+    const fileInput = screen.getByLabelText('إرفاق ملف');
+    const file = new File(['test'], 'test.exe', { type: 'application/x-msdownload' });
+    Object.defineProperty(fileInput, 'files', { value: [file] });
+    fireEvent.change(fileInput);
+    await waitFor(() => {
+      expect(screen.queryByText('test.exe')).not.toBeInTheDocument();
+    });
+  });
+
+  it('يظهر معاينة الملف عند رفع صورة', async () => {
+    render(<UnifiedChatWindow user={user as any} order={order as any} onClose={() => {}} />);
+    const fileInput = screen.getByLabelText('إرفاق ملف');
+    const file = new File(['img'], 'img.png', { type: 'image/png' });
+    Object.defineProperty(fileInput, 'files', { value: [file] });
+    fireEvent.change(fileInput);
+    await waitFor(() => {
+      expect(screen.getByAltText('img.png')).toBeInTheDocument();
+    });
+  });
+
+  it('يدعم الرد على رسالة', async () => {
+    render(<UnifiedChatWindow user={user as any} order={order as any} onClose={() => {}} />);
+    const replyBtns = screen.getAllByTitle('رد');
+    fireEvent.click(replyBtns[0]);
+    expect(screen.getByText(/رد على:/)).toBeInTheDocument();
   });
 });
