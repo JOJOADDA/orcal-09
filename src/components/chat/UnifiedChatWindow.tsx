@@ -15,6 +15,8 @@ import { unifiedChatService } from '@/services/unifiedChatService';
 import Picker from 'emoji-mart/dist/components/picker/picker';
 import 'emoji-mart/css/emoji-mart.css';
 import { FixedSizeList as List } from 'react-window';
+import { useEffect } from 'react';
+import type { ListOnScrollProps } from 'react-window';
 
 interface UnifiedChatWindowProps {
   user: Profile;
@@ -141,6 +143,23 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
     }, 0);
   };
 
+  // مرجع للـ List الافتراضية
+  const listRef = useRef<any>(null);
+  // تتبع آخر عدد للرسائل
+  const prevMessagesLength = useRef(messages.length);
+
+  // تمرير تلقائي عند وصول رسالة جديدة أو إرسال رسالة
+  useEffect(() => {
+    if (messages.length > prevMessagesLength.current) {
+      // عند إضافة رسالة جديدة، مرر لآخر رسالة
+      listRef.current?.scrollToItem(messages.slice(-visibleCount).length - 1, 'end');
+    }
+    prevMessagesLength.current = messages.length;
+  }, [messages.length, visibleCount]);
+
+  // عند تحميل رسائل قديمة، حافظ على موضع التمرير (لا تقفز للأسفل)
+  // (react-window يحافظ تلقائيًا على الموضع إذا لم يتغير itemCount بشكل كبير)
+
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <Card className="w-full max-w-4xl h-[90vh] bg-white dark:bg-gray-900 shadow-2xl flex flex-col border-0 overflow-hidden">
@@ -203,6 +222,7 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
               </div>
             ) : (
               <List
+                ref={listRef}
                 height={500}
                 itemCount={messages.slice(-visibleCount).length}
                 itemSize={110}
