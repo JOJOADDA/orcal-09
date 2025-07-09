@@ -5,11 +5,12 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { X, ArrowLeft, Send, MessageSquare, Zap } from 'lucide-react';
+import { X, ArrowLeft, Send, MessageSquare, Zap, Paperclip } from 'lucide-react';
 import { Profile, DesignOrder } from '@/types/database';
 import { useToast } from '@/hooks/use-toast';
 import { useLightningChat } from '@/hooks/useLightningChat';
 import { cn } from '@/lib/utils';
+import { unifiedChatService } from '@/services/unifiedChatService';
 
 interface UnifiedChatWindowProps {
   user: Profile;
@@ -19,6 +20,8 @@ interface UnifiedChatWindowProps {
 
 const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => {
   const [newMessage, setNewMessage] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -34,18 +37,35 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
     isTyping
   } = useLightningChat({ user, order });
 
-  // إرسال رسالة
+  // إرسال رسالة أو ملف
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || isLoading) return;
-    const messageContent = newMessage.trim();
-    setNewMessage('');
-    const success = await sendMessage(messageContent);
-    if (!success) {
-      setNewMessage(messageContent);
-      toast({ title: 'خطأ في الإرسال', description: 'تعذر إرسال الرسالة. حاول مرة أخرى.', variant: 'destructive' });
-    } else {
-      inputRef.current?.focus();
+    if ((!newMessage.trim() && !selectedFile) || isLoading || uploading) return;
+    if (selectedFile) {
+      setUploading(true);
+      try {
+        const uploaded = await unifiedChatService.uploadFile(selectedFile, order.id, user.id);
+        if (uploaded) {
+          await sendMessage(`[ملف]: ${uploaded.name}\n${uploaded.url}`, 'file');
+          setSelectedFile(null);
+        } else {
+          toast({ title: 'خطأ في رفع الملف', description: 'تعذر رفع الملف. حاول مرة أخرى.', variant: 'destructive' });
+        }
+      } catch (err) {
+        toast({ title: 'خطأ في رفع الملف', description: 'حدث خطأ غير متوقع.', variant: 'destructive' });
+      } finally {
+        setUploading(false);
+      }
+    } else if (newMessage.trim()) {
+      const messageContent = newMessage.trim();
+      setNewMessage('');
+      const success = await sendMessage(messageContent);
+      if (!success) {
+        setNewMessage(messageContent);
+        toast({ title: 'خطأ في الإرسال', description: 'تعذر إرسال الرسالة. حاول مرة أخرى.', variant: 'destructive' });
+      } else {
+        inputRef.current?.focus();
+      }
     }
   };
 
@@ -166,7 +186,39 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
             ) */}
           </ScrollArea>
           <div className="border-t bg-white p-4">
-            <form onSubmit={handleSendMessage} className="flex gap-3">
+            <form onSubmit={handleSendMessage} className="flex gap-3 items-center">
+              <Button
+                type="button"
+                className="h-12 w-12 rounded-full bg-gray-100 hover:bg-gray-200 p-0 flex items-center justify-center"
+                disabled={isLoading || uploading}
+                onClick={() => {
+                  if (!uploading) {
+                    document.getElementById('chat-file-input')?.click();
+                  }
+                }}
+                aria-label="إرفاق ملف"
+              >
+                <Paperclip className="w-5 h-5 text-gray-500" />
+              </Button>
+              <input
+                id="chat-file-input"
+                type="file"
+                className="hidden"
+                onChange={e => {
+                  if (e.target.files && e.target.files[0]) {
+                    setSelectedFile(e.target.files[0]);
+                  }
+                }}
+                accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/zip,application/x-zip-compressed,.rar,.zip,.7z,.txt,.doc,.docx"
+              />
+              {selectedFile && (
+                <div className="text-xs text-gray-700 bg-gray-100 rounded px-2 py-1 flex items-center gap-2">
+                  <span>{selectedFile.name}</span>
+                  <Button type="button" size="sm" variant="ghost" className="p-1" onClick={() => setSelectedFile(null)}>
+                    <X className="w-3 h-3" />
+                  </Button>
+                </div>
+              )}
               <div className="flex-1">
                 <Input
                   ref={inputRef}
@@ -174,17 +226,17 @@ const UnifiedChatWindow = ({ user, order, onClose }: UnifiedChatWindowProps) => 
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="اكتب رسالتك هنا..."
                   className="h-12 rounded-full border-2 border-gray-200 focus:border-blue-400"
-                  disabled={isLoading}
+                  disabled={isLoading || uploading}
                   dir="rtl"
                   maxLength={1000}
                 />
               </div>
               <Button
                 type="submit"
-                disabled={!newMessage.trim() || isLoading}
+                disabled={(!newMessage.trim() && !selectedFile) || isLoading || uploading}
                 className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed p-0"
               >
-                {isLoading ? (
+                {(isLoading || uploading) ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
                   <Send className="w-4 h-4" />
