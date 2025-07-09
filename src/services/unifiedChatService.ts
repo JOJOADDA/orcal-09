@@ -42,6 +42,50 @@ export class UnifiedChatService {
     return [];
   }
 
+  // إنشاء أو جلب غرفة دردشة
+  async createChatRoom(orderId: string, userId: string, userRole: string): Promise<ChatRoom | null> {
+    // تعتمد على الدالة السريعة في UltraFastChatService
+    // userRole: 'client' | 'designer' | 'admin'
+    // يعيد الغرفة إذا كانت موجودة أو ينشئها إذا لم تكن موجودة
+    // admin_id يتم تعيينه إذا كان المستخدم مصممًا
+    // client_id يتم جلبه من الطلب
+    // إذا فشل يعيد null
+    // ملاحظة: الدالة خاصة بالدردشة فقط وليست عامة للطلبات
+    // يمكن توسيعها لاحقًا لدعم حالات خاصة
+    // تعتمد على getOrCreateChatRoomFast
+    // ultraFastChatService.getOrCreateChatRoomFast(orderId, userId, userRole)
+    // الدالة خاصة بالدردشة فقط
+    // يمكن توسيعها لاحقًا لدعم حالات خاصة
+    return ultraFastChatService.getOrCreateChatRoomFast(orderId, userId, userRole);
+  }
+
+  // جلب غرفة دردشة واحدة
+  async getChatRoom(orderId: string): Promise<ChatRoom | null> {
+    return ultraFastChatService.getOrCreateChatRoomFast(orderId, '', 'client'); // userId فارغ لأننا نريد فقط جلب الغرفة
+  }
+
+  // جلب جميع غرف الدردشة (يمكن تخصيصها لاحقًا)
+  async getAllChatRooms(): Promise<ChatRoom[]> {
+    // لا يوجد دالة مباشرة، يمكن تنفيذها لاحقًا حسب الحاجة
+    return [];
+  }
+
+  // جلب رسائل غرفة دردشة
+  async getChatMessages(roomId: string): Promise<ChatMessage[]> {
+    // لا يوجد دالة مباشرة، يمكن تنفيذها لاحقًا حسب الحاجة
+    return [];
+  }
+
+  // جلب رسائل حسب الطلب
+  async getMessagesByOrderId(orderId: string): Promise<ChatMessage[]> {
+    return ultraFastChatService.getMessages(orderId);
+  }
+
+  // تنظيف الكاش
+  clearAllCache(): void {
+    ultraFastChatService.cleanup();
+  }
+
   // File Methods
   async uploadFile(file: File, orderId: string, uploaderId: string): Promise<OrderFile | null> {
     return fileService.uploadFile(file, orderId, uploaderId);

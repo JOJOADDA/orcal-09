@@ -3,7 +3,7 @@ import { Profile, DesignOrder, OrderFile, ChatRoom, ChatMessage, MessageFile } f
 import { authService } from './auth/authService';
 import { profileService } from './profiles/profileService';
 import { orderService } from './orders/orderService';
-import { chatService } from './chat/chatService';
+import { unifiedChatService } from './unifiedChatService';
 import { designerService } from './designers/designerService';
 import { fileService } from './files/fileService';
 import { statisticsService } from './statistics/statisticsService';
@@ -61,7 +61,7 @@ class SupabaseService {
   }) {
     const result = await orderService.createOrder(orderData);
     if (result.data && !result.error) {
-      await chatService.createChatRoom(result.data.id, orderData.client_id);
+      await unifiedChatService.createChatRoom(result.data.id, orderData.client_id, 'client');
     }
     return result;
   }
@@ -122,28 +122,28 @@ class SupabaseService {
   }
 
   // Chat Management
-  async createChatRoom(orderId: string, clientId: string, adminId?: string) {
-    return await chatService.createChatRoom(orderId, clientId, adminId);
+  async createChatRoom(orderId: string, userId: string, userRole: string) {
+    return await unifiedChatService.createChatRoom(orderId, userId, userRole);
   }
 
   async getChatRoom(orderId: string): Promise<ChatRoom | null> {
-    return await chatService.getChatRoom(orderId);
+    return await unifiedChatService.getChatRoom(orderId);
   }
 
   async getChatRoomByOrderId(orderId: string): Promise<ChatRoom | null> {
-    return await chatService.getChatRoom(orderId);
+    return await unifiedChatService.getChatRoom(orderId);
   }
 
   async getAllChatRooms(): Promise<ChatRoom[]> {
-    return await chatService.getAllChatRooms();
+    return await unifiedChatService.getAllChatRooms();
   }
 
   async getChatMessages(roomId: string): Promise<ChatMessage[]> {
-    return await chatService.getChatMessages(roomId);
+    return await unifiedChatService.getChatMessages(roomId);
   }
 
   async getMessagesByOrderId(orderId: string): Promise<ChatMessage[]> {
-    return await chatService.getMessagesByOrderId(orderId);
+    return await unifiedChatService.getMessagesByOrderId(orderId);
   }
 
   async sendMessage(messageData: {
@@ -155,11 +155,11 @@ class SupabaseService {
     content: string;
     message_type?: 'text' | 'file' | 'system';
   }) {
-    return await chatService.sendMessage(messageData);
+    return await unifiedChatService.sendMessage(messageData);
   }
 
   async markMessagesAsRead(roomId: string, userId: string) {
-    return await chatService.markMessagesAsRead(roomId, userId);
+    return await unifiedChatService.markMessagesAsRead(roomId, userId);
   }
 
   // Statistics
@@ -169,7 +169,7 @@ class SupabaseService {
 
   // Real-time subscriptions
   subscribeToMessages(orderId: string, callback: (message: ChatMessage) => void) {
-    return chatService.subscribeToMessages(orderId, callback);
+    return unifiedChatService.subscribeToMessages(orderId, callback);
   }
 
   // Message Files
@@ -196,7 +196,7 @@ class SupabaseService {
   clearAllCache(): void {
     profileService.clearAllCache();
     orderService.clearAllCache();
-    chatService.clearAllCache();
+    unifiedChatService.clearAllCache();
     designerService.clearAllCache();
     fileService.clearAllCache();
     statisticsService.clearAllCache();
