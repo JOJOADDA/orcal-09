@@ -211,6 +211,126 @@ export type Database = {
           },
         ]
       }
+      designer_activity: {
+        Row: {
+          available_from: string | null
+          available_until: string | null
+          created_at: string
+          current_capacity: number
+          current_orders_count: number
+          designer_id: string | null
+          id: string
+          last_activity: string
+          specializations: string[] | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          available_from?: string | null
+          available_until?: string | null
+          created_at?: string
+          current_capacity?: number
+          current_orders_count?: number
+          designer_id?: string | null
+          id?: string
+          last_activity?: string
+          specializations?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          available_from?: string | null
+          available_until?: string | null
+          created_at?: string
+          current_capacity?: number
+          current_orders_count?: number
+          designer_id?: string | null
+          id?: string
+          last_activity?: string
+          specializations?: string[] | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "designer_activity_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: true
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "designer_activity_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      designer_stats: {
+        Row: {
+          average_completion_time_hours: number | null
+          client_satisfaction_score: number | null
+          created_at: string
+          date: string
+          designer_id: string | null
+          id: string
+          on_time_delivery_rate: number | null
+          orders_completed: number | null
+          orders_in_progress: number | null
+          revenue_generated: number | null
+          tasks_completed: number | null
+          total_hours_worked: number | null
+          updated_at: string
+        }
+        Insert: {
+          average_completion_time_hours?: number | null
+          client_satisfaction_score?: number | null
+          created_at?: string
+          date: string
+          designer_id?: string | null
+          id?: string
+          on_time_delivery_rate?: number | null
+          orders_completed?: number | null
+          orders_in_progress?: number | null
+          revenue_generated?: number | null
+          tasks_completed?: number | null
+          total_hours_worked?: number | null
+          updated_at?: string
+        }
+        Update: {
+          average_completion_time_hours?: number | null
+          client_satisfaction_score?: number | null
+          created_at?: string
+          date?: string
+          designer_id?: string | null
+          id?: string
+          on_time_delivery_rate?: number | null
+          orders_completed?: number | null
+          orders_in_progress?: number | null
+          revenue_generated?: number | null
+          tasks_completed?: number | null
+          total_hours_worked?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "designer_stats_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "designer_stats_designer_id_fkey"
+            columns: ["designer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       designers: {
         Row: {
           created_at: string
@@ -294,6 +414,143 @@ export type Database = {
           },
         ]
       }
+      notification_settings: {
+        Row: {
+          created_at: string
+          email_notifications: boolean
+          id: string
+          notification_types: Json
+          push_notifications: boolean
+          quiet_hours_end: string | null
+          quiet_hours_start: string | null
+          sms_notifications: boolean
+          timezone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          notification_types?: Json
+          push_notifications?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          sms_notifications?: boolean
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email_notifications?: boolean
+          id?: string
+          notification_types?: Json
+          push_notifications?: boolean
+          quiet_hours_end?: string | null
+          quiet_hours_start?: string | null
+          sms_notifications?: boolean
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notification_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          action_url: string | null
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          priority: string
+          read_at: string | null
+          related_order_id: string | null
+          related_task_id: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          priority?: string
+          read_at?: string | null
+          related_order_id?: string | null
+          related_task_id?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          action_url?: string | null
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          priority?: string
+          read_at?: string | null
+          related_order_id?: string | null
+          related_task_id?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_related_order_id_fkey"
+            columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_related_task_id_fkey"
+            columns: ["related_task_id"]
+            isOneToOne: false
+            referencedRelation: "order_tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_files: {
         Row: {
           file_type: string
@@ -345,6 +602,156 @@ export type Database = {
             columns: ["uploaded_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_stages: {
+        Row: {
+          actual_duration_hours: number | null
+          assigned_designer_id: string | null
+          completed_at: string | null
+          created_at: string
+          estimated_duration_hours: number | null
+          id: string
+          notes: string | null
+          order_id: string | null
+          stage_name: string
+          stage_order: number
+          started_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_duration_hours?: number | null
+          assigned_designer_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_duration_hours?: number | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          stage_name: string
+          stage_order: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_duration_hours?: number | null
+          assigned_designer_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          estimated_duration_hours?: number | null
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          stage_name?: string
+          stage_order?: number
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_stages_assigned_designer_id_fkey"
+            columns: ["assigned_designer_id"]
+            isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_stages_assigned_designer_id_fkey"
+            columns: ["assigned_designer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_stages_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_tasks: {
+        Row: {
+          actual_hours: number | null
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          due_date: string | null
+          estimated_hours: number | null
+          id: string
+          order_id: string | null
+          priority: string
+          stage_id: string | null
+          status: string
+          task_description: string | null
+          task_name: string
+          updated_at: string
+        }
+        Insert: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          order_id?: string | null
+          priority?: string
+          stage_id?: string | null
+          status?: string
+          task_description?: string | null
+          task_name: string
+          updated_at?: string
+        }
+        Update: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          order_id?: string | null
+          priority?: string
+          stage_id?: string | null
+          status?: string
+          task_description?: string | null
+          task_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "active_designers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_tasks_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_tasks_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "order_stages"
             referencedColumns: ["id"]
           },
         ]
