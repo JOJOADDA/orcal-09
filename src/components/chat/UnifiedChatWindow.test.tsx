@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import UnifiedChatWindow from './UnifiedChatWindow';
-import { vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // Mockات أساسية
 vi.mock('@/hooks/use-toast', () => ({ useToast: () => ({ toast: vi.fn() }) }));
