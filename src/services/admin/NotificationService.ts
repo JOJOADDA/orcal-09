@@ -7,11 +7,10 @@ export interface Notification {
   message: string;
   type: 'info' | 'success' | 'warning' | 'error' | 'task' | 'deadline';
   related_order_id?: string;
-  related_task_id?: string;
   is_read: boolean;
   read_at?: string;
   action_url?: string;
-  priority: 'low' | 'normal' | 'high' | 'critical';
+  priority: 'low' | 'medium' | 'high' | 'critical';
   scheduled_for?: string;
   sent_at?: string;
   created_at: string;
@@ -23,15 +22,12 @@ export interface NotificationSettings {
   email_notifications: boolean;
   push_notifications: boolean;
   sms_notifications: boolean;
-  notification_types: {
-    task: boolean;
-    deadline: boolean;
-    order_update: boolean;
-    chat: boolean;
-  };
+  notification_types: any;
   quiet_hours_start?: string;
   quiet_hours_end?: string;
   timezone: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export class NotificationService {
@@ -43,7 +39,6 @@ export class NotificationService {
     type: Notification['type'];
     priority?: Notification['priority'];
     related_order_id?: string;
-    related_task_id?: string;
     action_url?: string;
     scheduled_for?: string;
   }): Promise<{ success: boolean; notification?: Notification; error?: string }> {
@@ -68,7 +63,7 @@ export class NotificationService {
         .from('notifications')
         .insert({
           ...notificationData,
-          priority: notificationData.priority || 'normal',
+          priority: notificationData.priority || 'medium',
           sent_at: notificationData.scheduled_for ? null : new Date().toISOString()
         })
         .select()
@@ -302,40 +297,57 @@ export class NotificationService {
     }
   }
 
-  // إرسال إشعارات المواعيد النهائية
+  // إرسال إشعارات المواعيد النهائية للطلبات
   static async notifyDeadlines(): Promise<void> {
     try {
       const tomorrow = new Date();
       tomorrow.setDate(tomorrow.getDate() + 1);
 
-      // البحث عن المهام المتأخرة أو القريبة من الانتهاء
-      const { data: tasks } = await supabase
-        .from('order_tasks')
-        .select(`
-          *,
-          design_orders(client_id, client_name, design_type)
-        `)
-        .lte('due_date', tomorrow.toISOString())
+      // البحث عن الطلبات القريبة من الانتهاء
+      const { data: orders } = await supabase
+        .from('design_orders')
+        .select('*')
+        .not('estimated_delivery', 'is', null)
+        .lte('estimated_delivery', tomorrow.toISOString())
         .in('status', ['pending', 'in_progress']);
 
-      if (!tasks) return;
+      if (!orders) return;
 
-      for (const task of tasks) {
-        const isOverdue = new Date(task.due_date) < new Date();
-        const title = isOverdue ? 'مهمة متأخرة!' : 'موعد نهائي قريب';
-        const message = `المهمة: ${task.task_name} - الطلب: ${task.design_orders.design_type}`;
+      for (const order of orders) {
+        const isOverdue = new Date(order.estimated_delivery) < new Date();
+        const title = isOverdue ? 'طلب متأخر!' : 'موعد تسليم قريب';
+        const message = `الطلب: ${order.design_type} - العميل: ${order.client_name}`;
 
-        if (task.assigned_to) {
-          await this.sendNotification({
-            user_id: task.assigned_to,
-            title,
-            message,
-            type: 'deadline',
-            priority: isOverdue ? 'critical' : 'high',
-            related_order_id: task.order_id,
-            related_task_id: task.id,
-            action_url: `/orders/${task.order_id}`
-          });
+        // إرسال إشعار للعميل
+        await this.sendNotification({
+          user_id: order.client_id,
+          title,
+          message,
+          type: 'deadline',
+          priority: isOverdue ? 'critical' : 'high',
+          related_order_id: order.id,
+          action_url: `/orders/${order.id}`
+        });
+
+        // إرسال إشعار للمصمم المخصص إذا كان هناك واحد
+        if (order.assigned_designer_id) {
+          const { data: designer } = await supabase
+            .from('designers')
+            .select('user_id')
+            .eq('id', order.assigned_designer_id)
+            .single();
+
+          if (designer) {
+            await this.sendNotification({
+              user_id: designer.user_id,
+              title,
+              message,
+              type: 'deadline',
+              priority: isOverdue ? 'critical' : 'high',
+              related_order_id: order.id,
+              action_url: `/orders/${order.id}`
+            });
+          }
         }
       }
     } catch (error) {
