@@ -217,6 +217,44 @@ export type Database = {
         }
         Relationships: []
       }
+      message_files: {
+        Row: {
+          file_type: Database["public"]["Enums"]["file_type"]
+          id: string
+          message_id: string
+          name: string
+          size_bytes: number
+          uploaded_at: string
+          url: string
+        }
+        Insert: {
+          file_type?: Database["public"]["Enums"]["file_type"]
+          id?: string
+          message_id: string
+          name: string
+          size_bytes?: number
+          uploaded_at?: string
+          url: string
+        }
+        Update: {
+          file_type?: Database["public"]["Enums"]["file_type"]
+          id?: string
+          message_id?: string
+          name?: string
+          size_bytes?: number
+          uploaded_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_files_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "chat_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notification_settings: {
         Row: {
           created_at: string
@@ -309,6 +347,106 @@ export type Database = {
           {
             foreignKeyName: "notifications_related_order_id_fkey"
             columns: ["related_order_id"]
+            isOneToOne: false
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_files: {
+        Row: {
+          file_type: Database["public"]["Enums"]["file_type"]
+          id: string
+          name: string
+          order_id: string
+          size_bytes: number
+          uploaded_at: string
+          uploaded_by: string
+          url: string
+        }
+        Insert: {
+          file_type?: Database["public"]["Enums"]["file_type"]
+          id?: string
+          name: string
+          order_id: string
+          size_bytes?: number
+          uploaded_at?: string
+          uploaded_by: string
+          url: string
+        }
+        Update: {
+          file_type?: Database["public"]["Enums"]["file_type"]
+          id?: string
+          name?: string
+          order_id?: string
+          size_bytes?: number
+          uploaded_at?: string
+          uploaded_by?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_files_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "design_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_tasks: {
+        Row: {
+          actual_hours: number | null
+          assigned_to: string | null
+          completed_date: string | null
+          created_at: string
+          created_by: string
+          due_date: string | null
+          estimated_hours: number | null
+          id: string
+          order_id: string
+          priority: Database["public"]["Enums"]["priority_level"]
+          status: Database["public"]["Enums"]["order_status"]
+          task_description: string | null
+          task_name: string
+          updated_at: string
+        }
+        Insert: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_date?: string | null
+          created_at?: string
+          created_by: string
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          order_id: string
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["order_status"]
+          task_description?: string | null
+          task_name: string
+          updated_at?: string
+        }
+        Update: {
+          actual_hours?: number | null
+          assigned_to?: string | null
+          completed_date?: string | null
+          created_at?: string
+          created_by?: string
+          due_date?: string | null
+          estimated_hours?: number | null
+          id?: string
+          order_id?: string
+          priority?: Database["public"]["Enums"]["priority_level"]
+          status?: Database["public"]["Enums"]["order_status"]
+          task_description?: string | null
+          task_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_tasks_order_id_fkey"
+            columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "design_orders"
             referencedColumns: ["id"]

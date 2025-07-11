@@ -52,7 +52,7 @@ export class FileService {
       }
 
       console.log('File uploaded and saved successfully');
-      return fileRecord as OrderFile;
+      return fileRecord;
     } catch (error) {
       this.handleError(error, 'Upload File');
       return null;

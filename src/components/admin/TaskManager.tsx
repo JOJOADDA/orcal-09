@@ -9,7 +9,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { OrderManagementService, OrderTask } from '@/services/admin/OrderManagementService';
+import { OrderManagementService } from '@/services/admin/OrderManagementService';
+import { OrderTask } from '@/types/orderTasks';
 import { NotificationService } from '@/services/admin/NotificationService';
 import { 
   Plus, 

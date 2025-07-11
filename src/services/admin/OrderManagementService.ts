@@ -171,6 +171,104 @@ export class OrderManagementService {
       return { success: false, error: 'حدث خطأ في حذف الطلب' };
     }
   }
+
+  // الحصول على المصممين المتاحين
+  static async getAvailableDesigners(): Promise<any[]> {
+    try {
+      const { data, error } = await supabase
+        .from('designers')
+        .select('*')
+        .eq('status', 'active')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching designers:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Unexpected error fetching designers:', error);
+      return [];
+    }
+  }
+
+  // الحصول على مهام طلب معين
+  static async getOrderTasks(orderId: string): Promise<OrderTask[]> {
+    try {
+      const { data, error } = await supabase
+        .from('order_tasks')
+        .select('*')
+        .eq('order_id', orderId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching order tasks:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Unexpected error fetching order tasks:', error);
+      return [];
+    }
+  }
+
+  // إنشاء مهمة جديدة
+  static async createTask(taskData: {
+    order_id: string;
+    task_name: string;
+    task_description?: string;
+    priority?: 'low' | 'medium' | 'high' | 'critical';
+    estimated_hours?: number;
+    due_date?: string;
+    assigned_to?: string;
+  }): Promise<{ success: boolean; taskId?: string; error?: string }> {
+    try {
+      const { data: user } = await supabase.auth.getUser();
+      if (!user.user) {
+        return { success: false, error: 'المستخدم غير مسجل الدخول' };
+      }
+
+      const { data, error } = await supabase
+        .from('order_tasks')
+        .insert({
+          ...taskData,
+          created_by: user.user.id,
+          priority: taskData.priority || 'medium'
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating task:', error);
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, taskId: data.id };
+    } catch (error) {
+      console.error('Unexpected error creating task:', error);
+      return { success: false, error: 'حدث خطأ في إنشاء المهمة' };
+    }
+  }
+}
+
+// تعريف نوع OrderTask
+export interface OrderTask {
+  id: string;
+  order_id: string;
+  task_name: string;
+  task_description?: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'delivered' | 'cancelled';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  estimated_hours?: number;
+  actual_hours?: number;
+  assigned_to?: string;
+  created_by: string;
+  due_date?: string;
+  completed_date?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const orderManagementService = new OrderManagementService();
