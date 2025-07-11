@@ -62,7 +62,7 @@ export class MessageDataService {
           order_id: messageData.order_id,
           sender_id: messageData.sender_id,
           sender_name: messageData.sender_name,
-          sender_role: dbSenderRole,
+          sender_role: dbSenderRole as 'admin' | 'client' | 'designer',
           content: messageData.content,
           message_type: messageData.message_type,
           is_read: false

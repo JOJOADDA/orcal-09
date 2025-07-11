@@ -93,31 +93,27 @@ export class EnhancedAuthService {
       console.log('Starting designer authentication for:', email);
       
       // التحقق من أن الإيميل مسجل كمصمم
-      const { data: isDesigner, error: verifyError } = await supabase.rpc('verify_designer_comprehensive', {
-        p_email: email.toLowerCase().trim()
-      });
+      const isDesigner = await EmailValidationService.verifyDesigner(email);
       
-      if (verifyError || !isDesigner) {
-        console.log('Designer verification failed:', verifyError);
+      if (!isDesigner) {
+        console.log('Designer verification failed');
         return { success: false, error: 'هذا الإيميل غير مسجل كمصمم أو غير مفعل' };
       }
 
       console.log('Designer verified, getting designer data...');
       
       // جلب معلومات المصمم
-      const { data: designerData, error: getError } = await supabase.rpc('get_designer_comprehensive', {
-        p_email: email.toLowerCase().trim()
-      });
+      const designerData = await EmailValidationService.getDesignerByEmail(email);
       
-      if (getError || !designerData || designerData.length === 0) {
-        console.error('Failed to get designer data:', getError);
+      if (!designerData) {
+        console.error('Failed to get designer data');
         return { success: false, error: 'لم يتم العثور على بيانات المصمم' };
       }
 
-      const designer = designerData[0];
+      const designer = designerData;
       console.log('Designer data retrieved:', designer);
       
-      if (!designer.is_verified) {
+      if (designer.status !== 'active') {
         return { success: false, error: 'حسابك كمصمم لم يتم التحقق منه بعد. يرجى الانتظار' };
       }
 
